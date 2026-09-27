@@ -25,7 +25,7 @@ export default function DramaCard({ drama }: Props) {
       </div>
       <div className={styles.body}>
         <h3 className={styles.title}>{drama.title}</h3>
-        <p className={styles.category}>{drama.categoryName ?? '未分類'}</p>
+        <p className={styles.category}>{drama.category?.name ?? drama.categoryName ?? '未分類'}</p>
       </div>
     </Link>
   );

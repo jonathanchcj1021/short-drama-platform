@@ -15,6 +15,7 @@ export interface Drama {
   coverUrl: string;
   categoryId: number;
   categoryName?: string;
+  category?: { id?: number; name?: string } | null;
   episodeCount: number;
   createdAt?: string;
 }

@@ -57,7 +57,7 @@ export default function DramaDetailClient() {
         <div className={styles.info}>
           <h1 className={styles.title}>{drama.title}</h1>
           <p className={styles.meta}>
-            <span className={styles.tag}>{drama.categoryName ?? '未分類'}</span>
+            <span className={styles.tag}>{drama.category?.name ?? drama.categoryName ?? '未分類'}</span>
             <span>{drama.episodeCount} 集</span>
           </p>
           <p className={styles.desc}>{drama.description}</p>
