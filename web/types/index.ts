@@ -20,6 +20,8 @@ export interface Drama {
   category?: { id?: number; name?: string } | null;
   /** 集數；後端尚未提供時為 null，此時不顯示 badge */
   episode_count: number | null;
+  release_year?: number | null;
+  is_completed?: boolean;
   created_at?: string;
 }
 
@@ -53,6 +55,7 @@ export interface User {
   phone_number?: string;
   email?: string;
   nickname?: string;
+  is_admin?: boolean;
 }
 
 /** OTP 要求回應 */

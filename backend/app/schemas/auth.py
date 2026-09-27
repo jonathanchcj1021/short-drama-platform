@@ -20,6 +20,7 @@ class UserOut(BaseModel):
     phone_number: str | None = None
     email: str | None = None
     nickname: str | None = None
+    is_admin: bool = False
 
     model_config = {"from_attributes": True}
 

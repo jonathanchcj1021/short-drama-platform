@@ -36,6 +36,11 @@ export default function Navbar() {
         <nav className={styles.right}>
           {loggedIn ? (
             <>
+              {user?.is_admin && (
+                <Link href="/admin" className={styles.adminLink}>
+                  管理
+                </Link>
+              )}
               {displayPhone && <span className={styles.phone}>{displayPhone}</span>}
               <button type="button" className={styles.logoutBtn} onClick={handleLogout}>
                 登出
