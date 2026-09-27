@@ -24,16 +24,19 @@ export default function Navbar() {
     router.push('/');
   };
 
+  const displayPhone = user?.phone ?? user?.phone_number ?? '';
+
   return (
     <header className={styles.navbar}>
       <div className={styles.inner}>
         <Link href="/" className={styles.brand}>
-          短劇平台
+          <span className={styles.logoMark} aria-hidden />
+          <span className={styles.brandText}>短劇平台</span>
         </Link>
         <nav className={styles.right}>
           {loggedIn ? (
             <>
-              <span className={styles.phone}>{user?.phone ?? '已登入'}</span>
+              {displayPhone && <span className={styles.phone}>{displayPhone}</span>}
               <button type="button" className={styles.logoutBtn} onClick={handleLogout}>
                 登出
               </button>

@@ -1,5 +1,6 @@
 package com.drama.app.ui.detail
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,9 +13,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -37,7 +40,14 @@ import coil.compose.AsyncImage
 import com.drama.app.data.model.DramaDetail
 import com.drama.app.data.model.Episode
 import com.drama.app.data.model.ProgressResponse
+import com.drama.app.data.model.categoryLabel
 import com.drama.app.di.AppContainer
+import com.drama.app.ui.theme.Accent
+import com.drama.app.ui.theme.BorderSubtle
+import com.drama.app.ui.theme.Success
+import com.drama.app.ui.theme.Surface
+import com.drama.app.ui.theme.TextSecondary
+import com.drama.app.ui.theme.TextTertiary
 import com.drama.app.util.Constants
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -95,11 +105,17 @@ fun DramaDetailScreen(
                         .aspectRatio(16f / 9f),
                 )
                 Spacer(Modifier.height(16.dp))
-                Text(d.title, style = MaterialTheme.typography.headlineSmall)
                 Text(
-                    "${d.category?.name ?: "未分類"}${d.releaseYear?.let { " · $it" } ?: ""}",
-                    style = MaterialTheme.typography.bodyMedium,
+                    d.title,
+                    style = MaterialTheme.typography.displayLarge,
                 )
+                // meta：分類（categoryLabel）· 年份 · 集數
+                val meta = buildList {
+                    add(d.categoryLabel)
+                    d.releaseYear?.let { add("$it") }
+                    d.episodeCount?.let { add("$it 集") }
+                }.joinToString(" · ")
+                Text(meta, style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
                 Spacer(Modifier.height(8.dp))
                 Text(d.description ?: "暫無介紹", style = MaterialTheme.typography.bodyMedium)
                 Spacer(Modifier.height(16.dp))
@@ -119,25 +135,35 @@ fun DramaDetailScreen(
 
 @Composable
 private fun EpisodeRow(episode: Episode, progressSeconds: Int?, onClick: () -> Unit) {
-    Card(onClick = onClick, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+    Card(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        shape = RoundedCornerShape(10.dp),
+        colors = CardDefaults.cardColors(containerColor = Surface),
+        border = BorderStroke(1.dp, BorderSubtle),
+    ) {
         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(
                 "第 ${episode.episodeNumber} 集",
                 style = MaterialTheme.typography.titleSmall,
+                color = Accent,
             )
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Text(episode.title, style = MaterialTheme.typography.bodyMedium)
+                Text(episode.title, style = MaterialTheme.typography.bodyMedium, color = TextSecondary)
                 episode.duration?.let {
-                    Text("時長 ${it / 60}:${(it % 60).toString().padStart(2, '0')}",
-                        style = MaterialTheme.typography.bodySmall)
+                    Text(
+                        "時長 ${it / 60}:${(it % 60).toString().padStart(2, '0')}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextTertiary,
+                    )
                 }
             }
             if (progressSeconds != null && progressSeconds > 5) {
                 Text(
                     "已看 ${progressSeconds / 60} 分",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = Success,
                 )
             }
         }

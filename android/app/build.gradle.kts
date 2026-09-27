@@ -103,5 +103,9 @@ dependencies {
     // Coil 圖片載入
     implementation("io.coil-kt:coil-compose:2.5.0")
 
+    // AndroidX Browser（Chrome Custom Tabs；目前 Google SSO 走 WebView fallback，
+    // 呢個依賴保留俾之後切 App Link / Custom Tab 用）
+    implementation("androidx.browser:browser:1.8.0")
+
     debugImplementation("androidx.compose.ui:ui-tooling")
 }

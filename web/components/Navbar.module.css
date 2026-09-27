@@ -2,57 +2,104 @@
   position: sticky;
   top: 0;
   z-index: 100;
-  background: #1a1a1f;
-  border-bottom: 1px solid #2c2c33;
+  height: var(--nav-height);
+  background: var(--gradient-nav);
+  backdrop-filter: blur(16px) saturate(140%);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  border-bottom: 1px solid var(--color-border-subtle);
 }
 
 .inner {
-  max-width: 1200px;
+  max-width: var(--container-max);
   margin: 0 auto;
-  padding: 0 20px;
-  height: 56px;
+  padding: 0 var(--container-pad-x);
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 
 .brand {
-  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.logoMark {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-sm);
+  background: var(--gradient-accent);
+  transition: transform var(--motion-base) var(--ease-spring);
+}
+
+.brand:hover .logoMark {
+  transform: scale(1.05);
+}
+
+.brandText {
+  font-family: var(--font-display);
   font-size: 18px;
-  font-weight: 700;
-  text-decoration: none;
+  font-weight: var(--weight-bold);
+  color: var(--color-text-primary);
 }
 
 .right {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--spacing-3);
 }
 
 .phone {
-  color: #bbb;
-  font-size: 14px;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
 }
 
 .loginBtn {
-  color: #fff;
-  background: #e53945;
-  padding: 6px 16px;
-  border-radius: 6px;
-  text-decoration: none;
-  font-size: 14px;
+  color: var(--color-text-on-accent);
+  background: var(--gradient-accent);
+  padding: 8px 18px;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-md);
+  font-weight: var(--weight-semibold);
+  transition: transform var(--motion-base) var(--ease-out),
+    box-shadow var(--motion-base) var(--ease-out);
+}
+
+.loginBtn:hover {
+  box-shadow: var(--shadow-accent);
+  transform: translateY(-1px);
 }
 
 .logoutBtn {
-  color: #ddd;
+  color: var(--color-text-secondary);
   background: transparent;
-  border: 1px solid #444;
-  padding: 6px 16px;
-  border-radius: 6px;
+  border: 1px solid var(--color-border-default);
+  padding: 7px 16px;
+  border-radius: var(--radius-full);
   cursor: pointer;
-  font-size: 14px;
+  font-size: var(--font-size-md);
+  transition: background var(--motion-fast) var(--ease-out),
+    color var(--motion-fast) var(--ease-out);
 }
 
 .logoutBtn:hover {
-  background: #2c2c33;
+  background: var(--color-surface-raised);
+  color: var(--color-text-primary);
+}
+
+@media (max-width: 640px) {
+  .inner {
+    padding: 0 16px;
+  }
+  .brandText {
+    font-size: 17px;
+  }
+  .phone {
+    font-size: 12px;
+    max-width: 100px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 }

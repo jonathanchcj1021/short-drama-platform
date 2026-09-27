@@ -25,10 +25,20 @@ export default function ProtectedRoute({ children }: Props) {
   }, [router]);
 
   if (!checked) {
-    return <div className={styles.loading}>載入中…</div>;
+    return (
+      <div className={styles.wrap}>
+        <div className={styles.spinner} />
+        <p className={styles.text}>載入中…</p>
+      </div>
+    );
   }
   if (!authed) {
-    return <div className={styles.loading}>即將跳轉登入頁…</div>;
+    return (
+      <div className={styles.wrap}>
+        <div className={styles.spinner} />
+        <p className={styles.text}>即將跳轉登入頁…</p>
+      </div>
+    );
   }
   return <>{children}</>;
 }

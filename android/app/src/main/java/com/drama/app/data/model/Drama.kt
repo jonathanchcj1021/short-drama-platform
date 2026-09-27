@@ -13,6 +13,8 @@ data class Drama(
     @SerialName("category_id") val categoryId: Int? = null,
     @SerialName("release_year") val releaseYear: Int? = null,
     @SerialName("is_completed") val isCompleted: Boolean = false,
+    @SerialName("category_name") val categoryName: String? = null,
+    @SerialName("episode_count") val episodeCount: Int? = null,
     val category: Category? = null,
 )
 
@@ -26,9 +28,21 @@ data class DramaDetail(
     @SerialName("category_id") val categoryId: Int? = null,
     @SerialName("release_year") val releaseYear: Int? = null,
     @SerialName("is_completed") val isCompleted: Boolean = false,
+    @SerialName("category_name") val categoryName: String? = null,
+    @SerialName("episode_count") val episodeCount: Int? = null,
     val category: Category? = null,
     val episodes: List<Episode> = emptyList(),
 )
+
+/**
+ * 分類顯示名稱：優先取關聯物件 category.name，其次取後端 flat field category_name，
+ * 都冇就 fallback「未分類」（同 web `drama.category?.name ?? drama.categoryName ?? '未分類'` 一致）。
+ */
+val Drama.categoryLabel: String
+    get() = category?.name ?: categoryName ?: "未分類"
+
+val DramaDetail.categoryLabel: String
+    get() = category?.name ?: categoryName ?: "未分類"
 
 /**
  * 分頁包裝（後端目前 /dramas 直接回傳陣列，此 model 保留以相容未來分頁格式）。

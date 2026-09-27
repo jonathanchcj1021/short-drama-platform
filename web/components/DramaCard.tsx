@@ -9,23 +9,38 @@ interface Props {
 }
 
 export default function DramaCard({ drama }: Props) {
-  // 若後端未給封面，使用 SVG placeholder
-  const cover =
-    drama.coverUrl ||
-    `data:image/svg+xml;utf8,${encodeURIComponent(
-      `<svg xmlns='http://www.w3.org/2000/svg' width='300' height='400'><rect width='100%' height='100%' fill='#3a3a44'/><text x='50%' y='50%' fill='#888' font-size='20' text-anchor='middle' dominant-baseline='middle'>${drama.title}</text></svg>`,
-    )}`;
+  const categoryLabel = drama.category?.name ?? drama.category_name ?? '未分類';
+  const hasCover = Boolean(drama.cover_url);
 
   return (
     <Link href={`/drama/?id=${drama.id}`} className={styles.card}>
-      <div className={styles.coverWrap}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={cover} alt={drama.title} className={styles.cover} />
-        <span className={styles.badge}>{drama.episodeCount} 集</span>
-      </div>
-      <div className={styles.body}>
+      {hasCover ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={drama.cover_url} alt={drama.title} className={styles.cover} />
+      ) : (
+        <div className={styles.placeholder}>
+          <span className={styles.placeholderTitle}>{drama.title}</span>
+        </div>
+      )}
+
+      {/* 底部 scrim */}
+      <div className={styles.scrim} />
+
+      {/* 頂左分類 chip */}
+      <span className={styles.chip}>{categoryLabel}</span>
+
+      {/* 正中間 hover 播放鈕 */}
+      <span className={styles.playBtn} aria-hidden>
+        ▶
+      </span>
+
+      {/* 底部文字區 */}
+      <div className={styles.info}>
         <h3 className={styles.title}>{drama.title}</h3>
-        <p className={styles.category}>{drama.category?.name ?? drama.categoryName ?? '未分類'}</p>
+        <div className={styles.meta}>
+          <span className={styles.dot} />
+          <span>{drama.episode_count != null ? `${drama.episode_count} 集` : '更新中'}</span>
+        </div>
       </div>
     </Link>
   );

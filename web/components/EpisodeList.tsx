@@ -28,9 +28,13 @@ export default function EpisodeList({ episodes, currentEpisodeId, progressMap = 
               href={`/play/?episode=${ep.id}`}
               className={`${styles.item} ${isCurrent ? styles.current : ''}`}
             >
-              <span className={styles.num}>第 {ep.episodeNumber} 集</span>
+              <span className={styles.num}>第 {ep.episode_number} 集</span>
               <span className={styles.title}>{ep.title}</span>
-              {watched && <span className={styles.watched}>已觀看</span>}
+              {watched && (
+                <span className={styles.watched}>
+                  <span aria-hidden>✓ </span>已觀看
+                </span>
+              )}
             </Link>
           </li>
         );

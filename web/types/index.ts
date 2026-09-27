@@ -1,4 +1,6 @@
 // 全域共用型別定義
+// 注意：FastAPI 後端回傳 snake_case JSON，此處型別直接對應 API 欄位，
+// 經 apiClient<T>() 直接 res.json() as T，無需另外轉換。
 
 /** 分類 */
 export interface Category {
@@ -12,22 +14,23 @@ export interface Drama {
   id: number;
   title: string;
   description: string;
-  coverUrl: string;
-  categoryId: number;
-  categoryName?: string;
+  cover_url: string;
+  category_id: number;
+  category_name?: string;
   category?: { id?: number; name?: string } | null;
-  episodeCount: number;
-  createdAt?: string;
+  /** 集數；後端尚未提供時為 null，此時不顯示 badge */
+  episode_count: number | null;
+  created_at?: string;
 }
 
 /** 單集 */
 export interface Episode {
   id: number;
-  dramaId: number;
-  episodeNumber: number;
+  drama_id: number;
+  episode_number: number;
   title: string;
-  durationSec: number;
-  videoUrl?: string;
+  duration_sec: number;
+  video_url?: string;
 }
 
 /** 劇集詳情（含集數列表） */
@@ -37,10 +40,10 @@ export interface DramaDetail extends Drama {
 
 /** 觀看進度 */
 export interface Progress {
-  episodeId: number;
-  positionSec: number;
-  durationSec: number;
-  updatedAt?: string;
+  episode_id: number;
+  position_sec: number;
+  duration_sec: number;
+  updated_at?: string;
 }
 
 /** 使用者 */
@@ -56,13 +59,13 @@ export interface User {
 export interface OtpRequestResponse {
   success: boolean;
   message?: string;
-  expiresInSec?: number;
+  expires_in_sec?: number;
 }
 
 /** OTP 驗證回應 */
 export interface OtpVerifyResponse {
-  accessToken: string;
-  refreshToken: string;
+  access_token: string;
+  refresh_token: string;
   user: User;
 }
 

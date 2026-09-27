@@ -31,6 +31,15 @@ class AuthRepository(
         return true
     }
 
+    /**
+     * Google SSO（WebView fallback）：從 OAuth redirect fragment 取出嘅
+     * access_token / refresh_token 存入 TokenManager，之後再打 /auth/me 攞 user。
+     */
+    suspend fun saveGoogleTokens(accessToken: String, refreshToken: String): Boolean {
+        tokenManager.saveTokens(accessToken, refreshToken)
+        return true
+    }
+
     suspend fun me() = api.me()
 
     fun logout() = tokenManager.clear()

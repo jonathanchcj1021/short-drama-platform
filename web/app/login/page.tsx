@@ -9,6 +9,29 @@ import styles from './page.module.css';
 
 const COOLDOWN_SEC = 60;
 
+function GoogleIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden>
+      <path
+        fill="#4285F4"
+        d="M17.64 9.2c0-.63-.06-1.23-.16-1.82H9v3.45h4.84a4.13 4.13 0 0 1-1.8 2.71v2.26h2.92c1.71-1.58 2.68-3.9 2.68-6.6z"
+      />
+      <path
+        fill="#34A853"
+        d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.8.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.03-3.7H.96v2.33A9 9 0 0 0 9 18z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M3.97 10.72a5.4 5.4 0 0 1 0-3.44V4.95H.96a9 9 0 0 0 0 8.1l3.01-2.33z"
+      />
+      <path
+        fill="#EA4335"
+        d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.59A9 9 0 0 0 .96 4.95l3.01 2.33C4.68 5.16 6.66 3.58 9 3.58z"
+      />
+    </svg>
+  );
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const [phone, setPhone] = useState('');
@@ -100,7 +123,7 @@ export default function LoginPage() {
         auth: false,
         body: { phone_number: phone.trim(), code: otp.trim() },
       });
-      saveAuth(data.accessToken, data.refreshToken, data.user);
+      saveAuth(data.access_token, data.refresh_token, data.user);
       router.push('/');
     } catch (err: unknown) {
       setError((err as { message?: string }).message ?? '驗證失敗');
@@ -112,7 +135,7 @@ export default function LoginPage() {
   return (
     <main className={styles.wrap}>
       <div className={styles.card}>
-        <h1 className={styles.title}>登入</h1>
+        <h1 className={styles.title}>歡迎回來</h1>
         <p className={styles.subtitle}>電話驗證碼 或 Google 登入</p>
 
         {error && <p className={styles.error}>{error}</p>}
@@ -123,10 +146,15 @@ export default function LoginPage() {
           onClick={handleGoogleLogin}
           disabled={busy}
         >
+          <GoogleIcon />
           {busy ? '處理中…' : '使用 Google 帳號登入'}
         </button>
 
-        <div className={styles.divider}>或用手機號碼</div>
+        <div className={styles.divider}>
+          <span className={styles.dividerLine} />
+          <span className={styles.dividerText}>或用手機號碼</span>
+          <span className={styles.dividerLine} />
+        </div>
 
         <form onSubmit={handleVerify} className={styles.form}>
           <label className={styles.field}>

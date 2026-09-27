@@ -8,13 +8,13 @@ import type { Episode } from '@/types';
 import styles from './page.module.css';
 
 interface StreamResponse {
-  videoUrl: string;
+  video_url: string;
 }
 
 interface EpisodeDetail extends Episode {
-  dramaTitle?: string;
-  prevEpisodeId?: number | null;
-  nextEpisodeId?: number | null;
+  drama_title?: string;
+  prev_episode_id?: number | null;
+  next_episode_id?: number | null;
 }
 
 const REPORT_INTERVAL_MS = 10_000;
@@ -35,7 +35,7 @@ function PlayInner() {
   const [error, setError] = useState<string | null>(null);
 
   // 拉集數資訊 + 串流位址
-  useEffect(() => {
+  const loadEpisode = () => {
     if (!episodeId) return;
     setLoading(true);
     setError(null);
@@ -46,10 +46,15 @@ function PlayInner() {
     ])
       .then(([ep, stream]) => {
         setEpisode(ep);
-        setVideoUrl(stream.videoUrl);
+        setVideoUrl(stream.video_url);
       })
       .catch((e: { message?: string }) => setError(e.message ?? '載入失敗'))
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    loadEpisode();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [episodeId]);
 
   // 每 10 秒上報觀看進度
@@ -63,8 +68,8 @@ function PlayInner() {
         await apiClient(`/episodes/${episodeId}/progress`, {
           method: 'POST',
           body: {
-            positionSec: Math.floor(v.currentTime),
-            durationSec: Math.floor(v.duration || 0),
+            position_sec: Math.floor(v.currentTime),
+            duration_sec: Math.floor(v.duration || 0),
           },
         });
       } catch {
@@ -81,14 +86,29 @@ function PlayInner() {
   }, [episodeId, videoUrl]);
 
   const goPrev = () => {
-    if (episode?.prevEpisodeId) router.push(`/play/?episode=${episode.prevEpisodeId}`);
+    if (episode?.prev_episode_id) router.push(`/play/?episode=${episode.prev_episode_id}`);
   };
   const goNext = () => {
-    if (episode?.nextEpisodeId) router.push(`/play/?episode=${episode.nextEpisodeId}`);
+    if (episode?.next_episode_id) router.push(`/play/?episode=${episode.next_episode_id}`);
   };
 
-  if (loading) return <p className={styles.hint}>載入中…</p>;
-  if (error) return <p className={styles.error}>{error}</p>;
+  if (loading) {
+    return (
+      <div className={styles.centerBox}>
+        <div className={styles.spinner} />
+      </div>
+    );
+  }
+  if (error) {
+    return (
+      <div className={styles.centerBox}>
+        <p className={styles.errorPill}>{error}</p>
+        <button type="button" className={styles.retryBtn} onClick={loadEpisode}>
+          重試
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.playerWrap}>
@@ -101,24 +121,24 @@ function PlayInner() {
       />
       <div className={styles.info}>
         <h1 className={styles.title}>
-          {episode?.dramaTitle ? `${episode.dramaTitle} · ` : ''}
-          第 {episode?.episodeNumber} 集
+          {episode?.drama_title ? `${episode.drama_title} · ` : ''}
+          第 {episode?.episode_number} 集
         </h1>
         <p className={styles.epTitle}>{episode?.title}</p>
         <div className={styles.nav}>
           <button
             type="button"
-            className={styles.navBtn}
+            className={styles.navGhost}
             onClick={goPrev}
-            disabled={!episode?.prevEpisodeId}
+            disabled={!episode?.prev_episode_id}
           >
             上一集
           </button>
           <button
             type="button"
-            className={styles.navBtn}
+            className={styles.navPrimary}
             onClick={goNext}
-            disabled={!episode?.nextEpisodeId}
+            disabled={!episode?.next_episode_id}
           >
             下一集
           </button>
