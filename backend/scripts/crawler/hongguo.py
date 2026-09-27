@@ -21,6 +21,14 @@ BASE_URL = "https://hongguoduanju.com"
 RANK_URL = f"{BASE_URL}/rank/hot-drama"
 HOME_URL = BASE_URL
 
+# 每日更新嘅 4 個熱播榜（綜合/真人劇/AI劇/漫劇）
+RANK_LISTS: dict[str, str] = {
+    "hot": f"{BASE_URL}/rank/hot-drama",
+    "real": f"{BASE_URL}/rank/hot-real-drama",
+    "comic": f"{BASE_URL}/rank/hot-comic-drama",
+    "ai": f"{BASE_URL}/rank/hot-ai-drama",
+}
+
 DEFAULT_HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
@@ -132,8 +140,9 @@ class HongguoCrawler:
             )
         return items
 
-    async def fetch_rank(self, limit: int = 20) -> list[ShortDramaItem]:
-        html = await self._get(RANK_URL)
+    async def fetch_rank(self, limit: int = 20, list_key: str = "hot") -> list[ShortDramaItem]:
+        url = RANK_LISTS.get(list_key, RANK_LISTS["hot"])
+        html = await self._get(url)
         items = self._parse_rank(html)
         return items[:limit]
 
@@ -209,7 +218,14 @@ class HongguoCrawler:
         return merged
 
     async def crawl(self, limit: int = 20) -> list[ShortDramaItem]:
-        rank_items = await self.fetch_rank(limit=limit)
+        """抓 4 個每日熱播榜＋首頁劇卡，合併後返回首 `limit` 部。
+
+        排序：綜合榜（hot）順序優先，其後係真人劇/AI劇/漫劇榜，最後先係淨喺首頁出現嘅劇。
+        """
+        per_list = max(limit // len(RANK_LISTS), 5)
+        all_items: list[ShortDramaItem] = []
+        for key in RANK_LISTS:
+            all_items.extend(await self.fetch_rank(limit=per_list, list_key=key))
         home_items = await self.fetch_home()
-        merged = self.merge(rank_items, home_items)
+        merged = self.merge(all_items, home_items)
         return merged[:limit]
