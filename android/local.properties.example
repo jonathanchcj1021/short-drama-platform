@@ -1,0 +1,8 @@
+# 複製為 local.properties（已被 .gitignore 忽略）即可覆寫 API base URL。
+# local.properties 也會被 Android Studio 自動寫入 sdk.dir，不用手動加。
+
+# Emulator 預設連主機 127.0.0.1 的位址（此值即為內建預設，可不用設）：
+# api.base.url=http://10.0.2.2:8000
+
+# 若要用實體裝置或區網測試，改成電腦的區網 IP，例如：
+# api.base.url=http://192.168.1.10:8000
