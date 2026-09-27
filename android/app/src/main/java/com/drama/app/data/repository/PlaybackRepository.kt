@@ -12,7 +12,7 @@ class PlaybackRepository(
     /** 上報觀看進度。 */
     suspend fun reportProgress(episodeId: Int, currentTime: Int, duration: Int?, completed: Boolean) {
         api.reportProgress(
-            episodeId = episodeId,
+            id = episodeId,
             body = com.drama.app.data.model.ProgressRequest(
                 currentTime = currentTime,
                 duration = duration,
