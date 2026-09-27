@@ -13,6 +13,7 @@ from fastapi.testclient import TestClient  # noqa: E402
 from app.core.deps import get_redis  # noqa: E402
 from app.database import Base, SessionLocal, engine  # noqa: E402
 from app.main import app  # noqa: E402
+from app.models.user import User  # noqa: E402
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -56,7 +57,11 @@ def client():
 
 @pytest.fixture
 def auth_headers(client, fake_redis):
-    """完成 OTP 登入並回傳 (headers, token_payload)。"""
+    """完成 OTP 登入並回傳 (headers, token_payload)。
+
+    測試用戶預設提升為管理員（CMS 測試需要）；如需測「普通用戶被拒」，
+    請自行建立非 admin 用戶。
+    """
 
     def _make(phone: str = "+886900000001"):
         r = client.post("/auth/otp/request", json={"phone_number": phone})
@@ -66,6 +71,15 @@ def auth_headers(client, fake_redis):
         r = client.post("/auth/otp/verify", json={"phone_number": phone, "code": code})
         assert r.status_code == 200, r.text
         data = r.json()
+        # 提升為 admin，畀 CMS 測試用
+        db = SessionLocal()
+        try:
+            user = db.get(User, data["user"]["id"])
+            if user is not None:
+                user.is_admin = True
+                db.commit()
+        finally:
+            db.close()
         return {"Authorization": f"Bearer {data['access_token']}"}, data
 
     return _make
