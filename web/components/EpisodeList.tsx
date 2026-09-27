@@ -25,7 +25,7 @@ export default function EpisodeList({ episodes, currentEpisodeId, progressMap = 
         return (
           <li key={ep.id}>
             <Link
-              href={`/play/${ep.id}`}
+              href={`/play/?episode=${ep.id}`}
               className={`${styles.item} ${isCurrent ? styles.current : ''}`}
             >
               <span className={styles.num}>第 {ep.episodeNumber} 集</span>

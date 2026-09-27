@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { apiClient } from '@/lib/apiClient';
 import type { Episode } from '@/types';
@@ -20,9 +20,13 @@ interface EpisodeDetail extends Episode {
 const REPORT_INTERVAL_MS = 10_000;
 
 function PlayInner() {
-  const params = useParams();
   const router = useRouter();
-  const episodeId = String(params?.episodeId ?? '');
+  const [episodeId, setEpisodeId] = useState<string>('');
+
+  // 靜態匯出下由查詢參數讀取集數 id（/play/?episode=1）
+  useEffect(() => {
+    setEpisodeId(new URLSearchParams(window.location.search).get('episode') ?? '');
+  }, []);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const [episode, setEpisode] = useState<EpisodeDetail | null>(null);
@@ -77,10 +81,10 @@ function PlayInner() {
   }, [episodeId, videoUrl]);
 
   const goPrev = () => {
-    if (episode?.prevEpisodeId) router.push(`/play/${episode.prevEpisodeId}`);
+    if (episode?.prevEpisodeId) router.push(`/play/?episode=${episode.prevEpisodeId}`);
   };
   const goNext = () => {
-    if (episode?.nextEpisodeId) router.push(`/play/${episode.nextEpisodeId}`);
+    if (episode?.nextEpisodeId) router.push(`/play/?episode=${episode.nextEpisodeId}`);
   };
 
   if (loading) return <p className={styles.hint}>載入中…</p>;

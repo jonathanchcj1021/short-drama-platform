@@ -17,7 +17,7 @@ export default function DramaCard({ drama }: Props) {
     )}`;
 
   return (
-    <Link href={`/drama/${drama.id}`} className={styles.card}>
+    <Link href={`/drama/?id=${drama.id}`} className={styles.card}>
       <div className={styles.coverWrap}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={cover} alt={drama.title} className={styles.cover} />

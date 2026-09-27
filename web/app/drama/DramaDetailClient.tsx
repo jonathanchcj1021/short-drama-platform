@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { useParams } from 'next/navigation';
 import EpisodeList from '@/components/EpisodeList';
 import { apiClient } from '@/lib/apiClient';
 import { isLoggedIn } from '@/lib/auth';
@@ -9,8 +8,12 @@ import type { DramaDetail, Progress } from '@/types';
 import styles from './page.module.css';
 
 export default function DramaDetailClient() {
-  const params = useParams();
-  const id = String(params?.id ?? '');
+  const [id, setId] = useState<string>('');
+
+  // 靜態匯出下由查詢參數讀取劇集 id（/drama/?id=1），新劇無需重新 build
+  useEffect(() => {
+    setId(new URLSearchParams(window.location.search).get('id') ?? '');
+  }, []);
 
   const [drama, setDrama] = useState<DramaDetail | null>(null);
   const [progress, setProgress] = useState<Progress | null>(null);
