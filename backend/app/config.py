@@ -23,6 +23,17 @@ class Settings(BaseSettings):
     OTP_TTL_SECONDS: int = 300          # 驗證碼有效 5 分鐘
     OTP_COOLDOWN_SECONDS: int = 60      # 同號碼 60 秒冷卻
     OTP_DAILY_LIMIT: int = 5            # 每號碼每日上限 5 次
+    # OTP 供應商：mock=驗證碼印 log + 提供 dev-code 端點；上線時改為真實 SMS 供應商
+    OTP_PROVIDER: str = "mock"
+
+    # Google OAuth (SSO)
+    GOOGLE_SSO_ENABLED: bool = False
+    GOOGLE_CLIENT_ID: str = ""
+    GOOGLE_CLIENT_SECRET: str = ""
+    # 回調地址，例如 http://localhost:8001/auth/google/callback
+    GOOGLE_REDIRECT_URI: str = ""
+    # OAuth 完成後跳返邊度（GitHub Pages 網站 / 本機 dev server）
+    WEB_APP_URL: str = "http://localhost:3000"
 
 
 @lru_cache

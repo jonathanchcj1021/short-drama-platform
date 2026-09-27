@@ -81,6 +81,34 @@
   cursor: not-allowed;
 }
 
+.googleBtn {
+  width: 100%;
+  background: #fff;
+  color: #1f1f1f;
+  border: 1px solid #d0d0d0;
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.googleBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.divider {
+  margin: 18px 0 4px;
+  text-align: center;
+  color: #777;
+  font-size: 13px;
+}
+
 .error {
   color: #e53945;
   font-size: 14px;

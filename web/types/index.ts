@@ -45,7 +45,9 @@ export interface Progress {
 /** 使用者 */
 export interface User {
   id: number;
-  phone: string;
+  phone?: string;
+  phone_number?: string;
+  email?: string;
   nickname?: string;
 }
 

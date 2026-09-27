@@ -4,7 +4,7 @@ import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import auth, categories, cms, dramas, episodes
+from app.api import auth, categories, cms, dramas, episodes, google_auth
 
 logging.basicConfig(level=logging.INFO)
 
@@ -19,6 +19,7 @@ app.add_middleware(
 )
 
 app.include_router(auth.router)
+app.include_router(google_auth.router)
 app.include_router(categories.router)
 app.include_router(dramas.router)
 app.include_router(episodes.router)

@@ -36,7 +36,7 @@ jobs:
 
       - name: Build static site
         env:
-          NEXT_PUBLIC_API_URL: https://tells-patients-belts-terms.trycloudflare.com
+          NEXT_PUBLIC_API_URL: https://reuters-nutritional-douglas-portions.trycloudflare.com
         run: npm run build
 
       - name: Setup Pages

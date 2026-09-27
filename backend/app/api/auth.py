@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.core.deps import get_current_user, get_db, get_redis
 from app.core.security import TokenError, create_access_token, create_refresh_token, decode_token
+from app.config import settings
 from app.models.user import User
 from app.schemas.auth import (
     AccessTokenOut,
@@ -40,6 +41,20 @@ def request_otp(body: OTPRequest, redis_client=Depends(get_redis)):
     # 開發期 mock：直接把驗證碼印在 server log
     logger.info("OTP for %s: %s", body.phone_number, result["code"])
     return {"message": "OTP 已發送"}
+
+
+@router.get("/otp/dev-code")
+def otp_dev_code(phone_number: str, redis_client=Depends(get_redis)):
+    """開發輔助（OTP_PROVIDER=mock 時先有）：回傳目前驗證碼，方便完成登入流程。
+
+    正式接上真實 SMS 供應商後，此端點會自動失效。
+    """
+    if settings.OTP_PROVIDER != "mock":
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="非 mock 模式，不提供 dev-code")
+    code = redis_client.get(f"otp:code:{phone_number}")
+    if code is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="尚未產生驗證碼，請先發送")
+    return {"phone_number": phone_number, "code": code}
 
 
 @router.post("/otp/verify", response_model=TokenPair)

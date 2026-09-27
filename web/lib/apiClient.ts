@@ -84,3 +84,4 @@ export async function apiClient<T>(path: string, options: RequestOptions = {}): 
 }
 
 export { BASE_URL };
+export const API_BASE_URL = BASE_URL;

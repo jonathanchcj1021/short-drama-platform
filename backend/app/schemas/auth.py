@@ -17,7 +17,8 @@ class RefreshTokenRequest(BaseModel):
 
 class UserOut(BaseModel):
     id: int
-    phone_number: str
+    phone_number: str | None = None
+    email: str | None = None
     nickname: str | None = None
 
     model_config = {"from_attributes": True}

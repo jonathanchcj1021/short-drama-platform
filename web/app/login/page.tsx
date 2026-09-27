@@ -2,9 +2,9 @@
 
 import { useEffect, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { apiClient } from '@/lib/apiClient';
+import { apiClient, API_BASE_URL } from '@/lib/apiClient';
 import { saveAuth } from '@/lib/auth';
-import type { OtpRequestResponse, OtpVerifyResponse } from '@/types';
+import type { OtpRequestResponse, OtpVerifyResponse, User } from '@/types';
 import styles from './page.module.css';
 
 const COOLDOWN_SEC = 60;
@@ -18,6 +18,39 @@ export default function LoginPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Google SSO 回調：token 喺 URL fragment（#access_token=...&refresh_token=...）
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash.includes('access_token=')) {
+      const params = new URLSearchParams(hash.slice(1));
+      const accessToken = params.get('access_token') ?? '';
+      const refreshToken = params.get('refresh_token') ?? '';
+      if (accessToken && refreshToken) {
+        setBusy(true);
+        fetch(`${API_BASE_URL}/auth/me`, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+          credentials: 'omit',
+        })
+          .then((res) => {
+            if (!res.ok) throw new Error('取得使用者資料失敗');
+            return res.json() as Promise<User>;
+          })
+          .then((user) => {
+            saveAuth(accessToken, refreshToken, user);
+            router.replace('/');
+          })
+          .catch((e: { message?: string }) => {
+            setBusy(false);
+            setError(e.message ?? 'Google 登入失敗，請重試');
+          });
+      }
+    }
+
+    const q = new URLSearchParams(window.location.search);
+    const err = q.get('error');
+    if (err) setError(err);
+  }, [router]);
+
   // 倒數計時
   useEffect(() => {
     if (countdown <= 0) return;
@@ -25,10 +58,16 @@ export default function LoginPage() {
     return () => clearTimeout(t);
   }, [countdown]);
 
+  const handleGoogleLogin = () => {
+    setError(null);
+    setBusy(true);
+    window.location.href = `${API_BASE_URL}/auth/google/authorize`;
+  };
+
   const handleSendOtp = async () => {
     setError(null);
-    if (!/^1\d{10}$/.test(phone.trim())) {
-      setError('請輸入正確的 11 位手機號碼');
+    if (!/^\+?[0-9]{8,15}$/.test(phone.trim())) {
+      setError('請輸入正確的手機號碼（可加國碼，如 +852）');
       return;
     }
     setBusy(true);
@@ -36,7 +75,7 @@ export default function LoginPage() {
       await apiClient<OtpRequestResponse>('/auth/otp/request', {
         method: 'POST',
         auth: false,
-        body: { phone: phone.trim() },
+        body: { phone_number: phone.trim() },
       });
       setOtpSent(true);
       setCountdown(COOLDOWN_SEC);
@@ -59,7 +98,7 @@ export default function LoginPage() {
       const data = await apiClient<OtpVerifyResponse>('/auth/otp/verify', {
         method: 'POST',
         auth: false,
-        body: { phone: phone.trim(), code: otp.trim() },
+        body: { phone_number: phone.trim(), code: otp.trim() },
       });
       saveAuth(data.accessToken, data.refreshToken, data.user);
       router.push('/');
@@ -74,20 +113,31 @@ export default function LoginPage() {
     <main className={styles.wrap}>
       <div className={styles.card}>
         <h1 className={styles.title}>登入</h1>
-        <p className={styles.subtitle}>手機號碼驗證碼登入</p>
+        <p className={styles.subtitle}>電話驗證碼 或 Google 登入</p>
 
         {error && <p className={styles.error}>{error}</p>}
+
+        <button
+          type="button"
+          className={styles.googleBtn}
+          onClick={handleGoogleLogin}
+          disabled={busy}
+        >
+          {busy ? '處理中…' : '使用 Google 帳號登入'}
+        </button>
+
+        <div className={styles.divider}>或用手機號碼</div>
 
         <form onSubmit={handleVerify} className={styles.form}>
           <label className={styles.field}>
             <span>手機號碼</span>
             <input
               type="tel"
-              inputMode="numeric"
+              inputMode="tel"
               placeholder="請輸入手機號碼"
               value={phone}
-              onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
-              maxLength={11}
+              onChange={(e) => setPhone(e.target.value.replace(/[^\d+]/g, ''))}
+              maxLength={16}
               disabled={otpSent}
               className={styles.input}
             />
