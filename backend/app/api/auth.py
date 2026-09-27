@@ -15,6 +15,7 @@ from app.schemas.auth import (
     OTPRequest,
     OTPVerify,
     RefreshTokenRequest,
+    RegisterRequest,
     TokenPair,
     UserOut,
 )
@@ -116,6 +117,34 @@ def login(body: LoginRequest, db: Session = Depends(get_db)):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="帳號或密碼錯誤",
         )
+
+    return TokenPair(
+        access_token=create_access_token(user.id),
+        refresh_token=create_refresh_token(user.id),
+        user=UserOut.model_validate(user),
+    )
+
+
+@router.post("/register", response_model=TokenPair)
+def register(body: RegisterRequest, db: Session = Depends(get_db)):
+    """公開註冊：email + 密碼，新用戶預設唔係 admin。"""
+    email = body.email.strip().lower()
+    existing = db.scalar(select(User).where(User.email == email))
+    if existing is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="此 email 已註冊，請直接登入",
+        )
+
+    user = User(
+        email=email,
+        nickname=body.nickname.strip() if body.nickname else None,
+        password_hash=hash_password(body.password),
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    logger.info("New user registered: id=%s email=%s", user.id, email)
 
     return TokenPair(
         access_token=create_access_token(user.id),

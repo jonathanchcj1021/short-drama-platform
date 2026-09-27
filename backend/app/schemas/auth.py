@@ -41,3 +41,10 @@ class LoginRequest(BaseModel):
     """帳號密碼登入：identifier 可以係 email 或手機號碼。"""
     identifier: str = Field(..., min_length=3, max_length=255)
     password: str = Field(..., min_length=6, max_length=128)
+
+
+class RegisterRequest(BaseModel):
+    """公開註冊：email + 密碼 + 暱稱（選填）。"""
+    email: str = Field(..., min_length=3, max_length=255)
+    password: str = Field(..., min_length=6, max_length=128)
+    nickname: str | None = Field(None, max_length=64)

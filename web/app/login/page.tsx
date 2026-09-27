@@ -32,12 +32,21 @@ function GoogleIcon() {
   );
 }
 
+type Mode = 'login' | 'register';
+
 export default function LoginPage() {
   const router = useRouter();
+  const [mode, setMode] = useState<Mode>('login');
 
-  // 密碼登入（主要）
+  // 登入表單
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
+
+  // 註冊表單
+  const [regEmail, setRegEmail] = useState('');
+  const [regPassword, setRegPassword] = useState('');
+  const [regConfirm, setRegConfirm] = useState('');
+  const [regNickname, setRegNickname] = useState('');
 
   // OTP 登入（備用，預設收起）
   const [phone, setPhone] = useState('');
@@ -119,6 +128,47 @@ export default function LoginPage() {
     }
   };
 
+  // ---------- 公開註冊 ----------
+  const handleRegister = async (e: FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    const email = regEmail.trim();
+    if (!email || !regPassword) {
+      setError('請填 email 同密碼');
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setError('請輸入正確的 email 格式');
+      return;
+    }
+    if (regPassword.length < 6) {
+      setError('密碼至少 6 位');
+      return;
+    }
+    if (regPassword !== regConfirm) {
+      setError('兩次輸入的密碼唔一致');
+      return;
+    }
+    setBusy(true);
+    try {
+      const data = await apiClient<TokenPair>('/auth/register', {
+        method: 'POST',
+        auth: false,
+        body: {
+          email,
+          password: regPassword,
+          nickname: regNickname.trim() || null,
+        },
+      });
+      saveAuth(data.access_token, data.refresh_token, data.user);
+      router.push('/');
+    } catch (err: unknown) {
+      setError((err as { message?: string }).message ?? '註冊失敗');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   // ---------- OTP 登入（備用） ----------
   const handleSendOtp = async () => {
     setError(null);
@@ -168,114 +218,200 @@ export default function LoginPage() {
   return (
     <main className={styles.wrap}>
       <div className={styles.card}>
-        <h1 className={styles.title}>歡迎回來</h1>
-        <p className={styles.subtitle}>登入短劇平台</p>
+        <h1 className={styles.title}>{mode === 'login' ? '歡迎回來' : '建立帳號'}</h1>
+        <p className={styles.subtitle}>
+          {mode === 'login' ? '登入短劇平台' : '免費註冊，即刻睇劇'}
+        </p>
 
         {error && <p className={styles.error}>{error}</p>}
 
-        {/* 帳號密碼登入（主要） */}
-        <form onSubmit={handlePasswordLogin} className={styles.form}>
-          <label className={styles.field}>
-            <span>帳號（手機號碼或 email）</span>
-            <input
-              type="text"
-              placeholder="85263106930 或 you@example.com"
-              value={identifier}
-              onChange={(e) => setIdentifier(e.target.value)}
-              className={styles.input}
-              autoComplete="username"
-            />
-          </label>
-          <label className={styles.field}>
-            <span>密碼</span>
-            <input
-              type="password"
-              placeholder="請輸入密碼"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className={styles.input}
-              autoComplete="current-password"
-            />
-          </label>
-          <button type="submit" className={styles.primaryBtn} disabled={busy}>
-            {busy ? '登入中…' : '登入'}
-          </button>
-        </form>
+        {mode === 'login' ? (
+          <>
+            {/* 帳號密碼登入（主要） */}
+            <form onSubmit={handlePasswordLogin} className={styles.form}>
+              <label className={styles.field}>
+                <span>帳號（手機號碼或 email）</span>
+                <input
+                  type="text"
+                  placeholder="85263106930 或 you@example.com"
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value)}
+                  className={styles.input}
+                  autoComplete="username"
+                />
+              </label>
+              <label className={styles.field}>
+                <span>密碼</span>
+                <input
+                  type="password"
+                  placeholder="請輸入密碼"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className={styles.input}
+                  autoComplete="current-password"
+                />
+              </label>
+              <button type="submit" className={styles.primaryBtn} disabled={busy}>
+                {busy ? '登入中…' : '登入'}
+              </button>
+            </form>
 
-        <div className={styles.divider}>
-          <span className={styles.dividerLine} />
-          <span className={styles.dividerText}>或</span>
-          <span className={styles.dividerLine} />
-        </div>
-
-        <button
-          type="button"
-          className={styles.googleBtn}
-          onClick={handleGoogleLogin}
-          disabled={busy}
-        >
-          <GoogleIcon />
-          使用 Google 帳號登入
-        </button>
-
-        {/* OTP 備用登入（可摺疊） */}
-        <div className={styles.divider}>
-          <span className={styles.dividerLine} />
-          <button
-            type="button"
-            className={styles.toggleLink}
-            onClick={() => setShowOtp((v) => !v)}
-          >
-            {showOtp ? '收起手機驗證碼登入' : '用手機驗證碼登入'}
-          </button>
-          <span className={styles.dividerLine} />
-        </div>
-
-        {showOtp && (
-          <form onSubmit={handleVerify} className={styles.form}>
-            <label className={styles.field}>
-              <span>手機號碼</span>
-              <input
-                type="tel"
-                inputMode="tel"
-                placeholder="請輸入手機號碼"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value.replace(/[^\d+]/g, ''))}
-                maxLength={16}
-                disabled={otpSent}
-                className={styles.input}
-              />
-            </label>
-
-            {!otpSent ? (
+            {/* 切換去註冊 */}
+            <div style={{ textAlign: 'center', marginTop: 14 }}>
               <button
                 type="button"
-                className={styles.ghostBtn}
-                onClick={handleSendOtp}
-                disabled={busy || countdown > 0}
+                className={styles.toggleLink}
+                onClick={() => {
+                  setMode('register');
+                  setError(null);
+                }}
               >
-                {countdown > 0 ? `${countdown}s 後重發` : '發送驗證碼'}
+                未註冊？立即註冊
               </button>
-            ) : (
-              <>
+            </div>
+
+            <div className={styles.divider}>
+              <span className={styles.dividerLine} />
+              <span className={styles.dividerText}>或</span>
+              <span className={styles.dividerLine} />
+            </div>
+
+            <button
+              type="button"
+              className={styles.googleBtn}
+              onClick={handleGoogleLogin}
+              disabled={busy}
+            >
+              <GoogleIcon />
+              使用 Google 帳號登入
+            </button>
+
+            {/* OTP 備用登入（可摺疊） */}
+            <div className={styles.divider}>
+              <span className={styles.dividerLine} />
+              <button
+                type="button"
+                className={styles.toggleLink}
+                onClick={() => setShowOtp((v) => !v)}
+              >
+                {showOtp ? '收起手機驗證碼登入' : '用手機驗證碼登入'}
+              </button>
+              <span className={styles.dividerLine} />
+            </div>
+
+            {showOtp && (
+              <form onSubmit={handleVerify} className={styles.form}>
                 <label className={styles.field}>
-                  <span>驗證碼</span>
+                  <span>手機號碼</span>
                   <input
-                    type="text"
-                    inputMode="numeric"
-                    placeholder="請輸入 6 位驗證碼"
-                    value={otp}
-                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                    maxLength={6}
+                    type="tel"
+                    inputMode="tel"
+                    placeholder="請輸入手機號碼"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value.replace(/[^\d+]/g, ''))}
+                    maxLength={16}
+                    disabled={otpSent}
                     className={styles.input}
                   />
                 </label>
-                <button type="submit" className={styles.ghostBtn} disabled={busy}>
-                  {busy ? '驗證中…' : '驗證登入'}
-                </button>
-              </>
+
+                {!otpSent ? (
+                  <button
+                    type="button"
+                    className={styles.ghostBtn}
+                    onClick={handleSendOtp}
+                    disabled={busy || countdown > 0}
+                  >
+                    {countdown > 0 ? `${countdown}s 後重發` : '發送驗證碼'}
+                  </button>
+                ) : (
+                  <>
+                    <label className={styles.field}>
+                      <span>驗證碼</span>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        placeholder="請輸入 6 位驗證碼"
+                        value={otp}
+                        onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                        maxLength={6}
+                        className={styles.input}
+                      />
+                    </label>
+                    <button type="submit" className={styles.ghostBtn} disabled={busy}>
+                      {busy ? '驗證中…' : '驗證登入'}
+                    </button>
+                  </>
+                )}
+              </form>
             )}
-          </form>
+          </>
+        ) : (
+          <>
+            {/* 註冊表單 */}
+            <form onSubmit={handleRegister} className={styles.form}>
+              <label className={styles.field}>
+                <span>Email *</span>
+                <input
+                  type="email"
+                  placeholder="you@example.com"
+                  value={regEmail}
+                  onChange={(e) => setRegEmail(e.target.value)}
+                  className={styles.input}
+                  autoComplete="email"
+                />
+              </label>
+              <label className={styles.field}>
+                <span>密碼 *（至少 6 位）</span>
+                <input
+                  type="password"
+                  placeholder="設定密碼"
+                  value={regPassword}
+                  onChange={(e) => setRegPassword(e.target.value)}
+                  className={styles.input}
+                  autoComplete="new-password"
+                />
+              </label>
+              <label className={styles.field}>
+                <span>確認密碼 *</span>
+                <input
+                  type="password"
+                  placeholder="再輸入一次密碼"
+                  value={regConfirm}
+                  onChange={(e) => setRegConfirm(e.target.value)}
+                  className={styles.input}
+                  autoComplete="new-password"
+                />
+              </label>
+              <label className={styles.field}>
+                <span>暱稱（選填）</span>
+                <input
+                  type="text"
+                  placeholder="想點樣稱呼你"
+                  value={regNickname}
+                  onChange={(e) => setRegNickname(e.target.value)}
+                  className={styles.input}
+                  maxLength={64}
+                />
+              </label>
+              <button type="submit" className={styles.primaryBtn} disabled={busy}>
+                {busy ? '註冊中…' : '註冊並登入'}
+              </button>
+            </form>
+
+            <div style={{ textAlign: 'center', marginTop: 14 }}>
+              <button
+                type="button"
+                className={styles.toggleLink}
+                onClick={() => {
+                  setMode('login');
+                  setError(null);
+                }}
+              >
+                已有帳號？返回登入
+              </button>
+            </div>
+          </>
         )}
       </div>
     </main>
