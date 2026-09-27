@@ -27,7 +27,7 @@ export default function HomePage() {
     setError(null);
     apiClient<Drama[]>('/dramas', {
       auth: false,
-      query: activeCategory !== undefined ? { category: activeCategory } : undefined,
+      query: activeCategory !== undefined ? { category_id: activeCategory } : undefined,
     })
       .then((data) => setDramas(data ?? []))
       .catch((e: { message?: string }) => setError(e.message ?? '載入失敗'))

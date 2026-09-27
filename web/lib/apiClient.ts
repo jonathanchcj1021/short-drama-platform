@@ -2,6 +2,8 @@ import { getAccessToken, clearAuth } from './auth';
 import type { ApiError } from '@/types';
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
+// GitHub Pages 專案頁 basePath（與 next.config.js 一致）；dev 下係空字串
+const SITE_BASE_PATH = process.env.NODE_ENV === 'production' ? '/short-drama-platform' : '';
 
 interface RequestOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
@@ -48,13 +50,11 @@ export async function apiClient<T>(path: string, options: RequestOptions = {}): 
     throw err;
   }
 
-  // 401：清除憑證並跳轉登入頁
+  // 401：清除憑證並跳轉登入頁（需帶 basePath，GitHub Pages 唔喺根路徑）
   if (res.status === 401) {
     clearAuth();
     if (typeof window !== 'undefined') {
-      const loginUrl = '/login';
-      // basePath 在 production 由 Next 處理，這裡直接導回首頁登入
-      window.location.href = loginUrl;
+      window.location.href = `${SITE_BASE_PATH}/login`;
     }
     const err: ApiError = { message: '登入已失效，請重新登入', status: 401 };
     throw err;

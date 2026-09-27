@@ -31,8 +31,10 @@ export interface Episode {
   drama_id: number;
   episode_number: number;
   title: string;
-  duration_sec: number;
   video_url?: string;
+  /** 時長（秒） */
+  duration?: number | null;
+  description?: string | null;
 }
 
 /** 劇集詳情（含集數列表） */
