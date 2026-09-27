@@ -1,0 +1,51 @@
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 10px;
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  background: #22222a;
+  border-radius: 8px;
+  text-decoration: none;
+  color: #fff;
+  border: 1px solid transparent;
+  transition: border-color 0.15s ease;
+}
+
+.item:hover {
+  border-color: #e53945;
+}
+
+.current {
+  border-color: #e53945;
+}
+
+.num {
+  font-size: 13px;
+  color: #e53945;
+  font-weight: 600;
+}
+
+.title {
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.watched {
+  font-size: 12px;
+  color: #4caf50;
+}
+
+.empty {
+  color: #888;
+}

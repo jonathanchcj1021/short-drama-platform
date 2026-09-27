@@ -1,0 +1,58 @@
+.playerWrap {
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.video {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #000;
+  border-radius: 10px;
+  display: block;
+}
+
+.info {
+  padding: 16px 4px;
+}
+
+.title {
+  margin: 0 0 6px;
+  font-size: 20px;
+}
+
+.epTitle {
+  margin: 0 0 16px;
+  color: #999;
+  font-size: 15px;
+}
+
+.nav {
+  display: flex;
+  gap: 12px;
+}
+
+.navBtn {
+  background: #22222a;
+  color: #fff;
+  border: 1px solid #333;
+  padding: 8px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.navBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.navBtn:hover:not(:disabled) {
+  border-color: #e53945;
+}
+
+.hint {
+  color: #888;
+}
+
+.error {
+  color: #e53945;
+}

@@ -1,0 +1,133 @@
+'use client';
+
+import { useEffect, useRef, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import ProtectedRoute from '@/components/ProtectedRoute';
+import { apiClient } from '@/lib/apiClient';
+import type { Episode } from '@/types';
+import styles from './page.module.css';
+
+interface StreamResponse {
+  videoUrl: string;
+}
+
+interface EpisodeDetail extends Episode {
+  dramaTitle?: string;
+  prevEpisodeId?: number | null;
+  nextEpisodeId?: number | null;
+}
+
+const REPORT_INTERVAL_MS = 10_000;
+
+function PlayInner() {
+  const params = useParams();
+  const router = useRouter();
+  const episodeId = String(params?.episodeId ?? '');
+
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [episode, setEpisode] = useState<EpisodeDetail | null>(null);
+  const [videoUrl, setVideoUrl] = useState<string>('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // 拉集數資訊 + 串流位址
+  useEffect(() => {
+    if (!episodeId) return;
+    setLoading(true);
+    setError(null);
+
+    Promise.all([
+      apiClient<EpisodeDetail>(`/episodes/${episodeId}`),
+      apiClient<StreamResponse>(`/episodes/${episodeId}/stream`),
+    ])
+      .then(([ep, stream]) => {
+        setEpisode(ep);
+        setVideoUrl(stream.videoUrl);
+      })
+      .catch((e: { message?: string }) => setError(e.message ?? '載入失敗'))
+      .finally(() => setLoading(false));
+  }, [episodeId]);
+
+  // 每 10 秒上報觀看進度
+  useEffect(() => {
+    if (!episodeId || !videoUrl) return;
+
+    const report = async () => {
+      const v = videoRef.current;
+      if (!v) return;
+      try {
+        await apiClient(`/episodes/${episodeId}/progress`, {
+          method: 'POST',
+          body: {
+            positionSec: Math.floor(v.currentTime),
+            durationSec: Math.floor(v.duration || 0),
+          },
+        });
+      } catch {
+        // 忽略單次上報失敗
+      }
+    };
+
+    const timer = setInterval(report, REPORT_INTERVAL_MS);
+    return () => {
+      clearInterval(timer);
+      // 離開時最後上報一次
+      report();
+    };
+  }, [episodeId, videoUrl]);
+
+  const goPrev = () => {
+    if (episode?.prevEpisodeId) router.push(`/play/${episode.prevEpisodeId}`);
+  };
+  const goNext = () => {
+    if (episode?.nextEpisodeId) router.push(`/play/${episode.nextEpisodeId}`);
+  };
+
+  if (loading) return <p className={styles.hint}>載入中…</p>;
+  if (error) return <p className={styles.error}>{error}</p>;
+
+  return (
+    <div className={styles.playerWrap}>
+      <video
+        ref={videoRef}
+        src={videoUrl}
+        controls
+        autoPlay
+        className={styles.video}
+      />
+      <div className={styles.info}>
+        <h1 className={styles.title}>
+          {episode?.dramaTitle ? `${episode.dramaTitle} · ` : ''}
+          第 {episode?.episodeNumber} 集
+        </h1>
+        <p className={styles.epTitle}>{episode?.title}</p>
+        <div className={styles.nav}>
+          <button
+            type="button"
+            className={styles.navBtn}
+            onClick={goPrev}
+            disabled={!episode?.prevEpisodeId}
+          >
+            上一集
+          </button>
+          <button
+            type="button"
+            className={styles.navBtn}
+            onClick={goNext}
+            disabled={!episode?.nextEpisodeId}
+          >
+            下一集
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function PlayClient() {
+  return (
+    <ProtectedRoute>
+      <PlayInner />
+    </ProtectedRoute>
+  );
+}

@@ -1,0 +1,63 @@
+.header {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 32px;
+}
+
+.cover {
+  width: 200px;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  border-radius: 10px;
+  background: #333;
+  flex-shrink: 0;
+}
+
+.info {
+  flex: 1;
+}
+
+.title {
+  margin: 0 0 8px;
+  font-size: 28px;
+}
+
+.meta {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  color: #999;
+  font-size: 14px;
+  margin: 0 0 16px;
+}
+
+.tag {
+  background: #2c2c33;
+  padding: 3px 10px;
+  border-radius: 4px;
+  color: #ddd;
+}
+
+.desc {
+  color: #bbb;
+  line-height: 1.7;
+  font-size: 15px;
+}
+
+.progress {
+  color: #4caf50;
+  font-size: 14px;
+}
+
+.sectionTitle {
+  font-size: 20px;
+  margin: 0 0 16px;
+}
+
+.hint {
+  color: #888;
+}
+
+.error {
+  color: #e53945;
+}

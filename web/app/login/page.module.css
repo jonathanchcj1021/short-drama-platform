@@ -1,0 +1,88 @@
+.wrap {
+  display: flex;
+  justify-content: center;
+  padding: 60px 20px;
+}
+
+.card {
+  width: 100%;
+  max-width: 380px;
+  background: #1e1e25;
+  border-radius: 12px;
+  padding: 32px 28px;
+  border: 1px solid #2c2c33;
+}
+
+.title {
+  margin: 0;
+  font-size: 24px;
+}
+
+.subtitle {
+  margin: 6px 0 24px;
+  color: #999;
+  font-size: 14px;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+  color: #ccc;
+}
+
+.input {
+  background: #141418;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: #fff;
+  font-size: 16px;
+}
+
+.input:focus {
+  outline: none;
+  border-color: #e53945;
+}
+
+.primaryBtn {
+  background: #e53945;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.primaryBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ghostBtn {
+  background: transparent;
+  color: #999;
+  border: none;
+  padding: 8px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.ghostBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.error {
+  color: #e53945;
+  font-size: 14px;
+  margin: 0 0 12px;
+}
