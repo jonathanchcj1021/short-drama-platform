@@ -31,11 +31,13 @@
 1. 開啟 Android Studio。
 2. 選 **File → Open**。
 3. 選擇 **`android/` 這個目錄**（不是 monorepo 根目錄，也不是 `app/`），按下 Open。
-4. 等待第一次 Gradle Sync：Android Studio 會自動下載 Gradle 8.5、AGP、所有依賴。
+4. 等待第一次 Gradle Sync：Android Studio 會自動用專案內嘅 **Gradle Wrapper**（`./gradlew`，版本 8.5），唔需要另外安裝 Gradle。
    - 若出現「Gradle JDK」設定，請選 **JDK 17**（通常是 Android Studio 內建的 jbr-17）。
 5. Sync 成功後即可建置。
 
 > 第一次同步會花較久（需下載依賴），屬正常現象。
+>
+> 💡 **唔想開 Android Studio？** 可以直接用命令列 `./gradlew` 建置同安裝，詳見下方[第 10 節](#10-本機命令列建置與執行)。
 
 ---
 
@@ -150,13 +152,81 @@ http://10.0.2.2:8000
 
 ---
 
-## 10. 本機命令列建置（選用）
+## 10. 本機命令列建置與執行
+
+專案已包含 **Gradle Wrapper**（`gradlew`、`gradlew.bat`、`gradle/wrapper/`），唔需要另外安裝 Gradle。
+所有命令喺 `android/` 目錄下執行。
+
+### 10.1 先決條件（命令列建置）
+
+- **JDK 17**（命令列 `java -version` 確認；macOS 可用 `brew install openjdk@17`）
+- **Android SDK**（裝咗 Android Studio 就有，通常喺 `~/Library/Android/sdk`）
+
+### 10.2 設定 Android SDK 路徑
+
+命令列建置需要話畀 Gradle 聽 SDK 喺邊，有兩種方法（揀其一）：
+
+**方法 A：`local.properties`（推薦，Android Studio 都會自動寫）**
+
+喺 `android/` 目錄建立 `local.properties`：
+
+```properties
+sdk.dir=/Users/你的用戶名/Library/Android/sdk
+# 可選：覆寫 API base URL
+# api.base.url=http://10.0.2.2:8000
+```
+
+> 用 Android Studio 開過一次專案後，`local.properties` 會自動生成，唔使手動加。
+
+**方法 B：環境變數**
+
+```bash
+export ANDROID_HOME=$HOME/Library/Android/sdk
+export PATH=$ANDROID_HOME/platform-tools:$PATH
+```
+
+可以加落 `~/.zshrc` 永久生效。
+
+### 10.3 建置 APK
 
 ```bash
 cd android
-./gradlew assembleDebug      # 產生 app/build/outputs/apk/debug/app-debug.apk
-./gradlew installDebug       # 安裝到已連線的 Emulator/裝置
+./gradlew assembleDebug
 ```
 
-> 本環境未預裝 Android SDK，命令列建置需先設定 `ANDROID_HOME` 與 `local.properties` 的 `sdk.dir`；
-> 一般開發建議直接用 Android Studio 操作。
+成功後 APK 喺：
+```
+app/build/outputs/apk/debug/app-debug.apk
+```
+
+### 10.4 安裝到 Emulator / 實機
+
+先確認有裝置連線（Emulator 已啟動或 USB 連接實機）：
+
+```bash
+# 查看已連線裝置
+adb devices
+
+# 安裝並自動開啟 App
+./gradlew installDebug
+```
+
+`installDebug` 會自動安裝到第一個已連線嘅裝置。如果有多個裝置，用 `adb -s <裝置ID> install app/build/outputs/apk/debug/app-debug.apk`。
+
+### 10.5 其他常用命令
+
+```bash
+./gradlew tasks              # 列出所有可用 task
+./gradlew clean              # 清理 build 目錄
+./gradlew lintDebug          # 跑 Lint 檢查
+./gradlew assembleRelease    # 建置 Release APK（需要簽章設定）
+```
+
+### 10.6 macOS 常見問題
+
+| 問題 | 解決方法 |
+|---|---|
+| `./gradlew: Permission denied` | `chmod +x gradlew` |
+| `SDK location not found` | 設定 `local.properties` 嘅 `sdk.dir` 或 `ANDROID_HOME` |
+| `Unsupported class file major version` | 確認用緊 JDK 17（`java -version`），AGP 8.2 要求 JDK 17 |
+| Build 好慢 | 首次需下載 Gradle 8.5 同所有依賴，之後有快取 |

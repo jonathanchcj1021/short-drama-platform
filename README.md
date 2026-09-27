@@ -152,6 +152,26 @@ npm run build
    - Android Studio 頂部選 Emulator，點擊 ▶ Run（或 `^R`）
    - App 安裝到 Emulator 並自動開啟
 
+#### 命令列建置（不需 Android Studio）
+
+專案已包含 Gradle Wrapper，直接用 `./gradlew` 即可：
+
+```bash
+cd android
+
+# 首次：設定 SDK 路徑（Android Studio 開過一次會自動寫入）
+echo "sdk.dir=$HOME/Library/Android/sdk" > local.properties
+
+# 建置 Debug APK
+./gradlew assembleDebug
+# → app/build/outputs/apk/debug/app-debug.apk
+
+# 安裝到已啟動嘅 Emulator / 連接嘅實機
+./gradlew installDebug
+```
+
+> 需要 JDK 17 + Android SDK。詳細 macOS 設定、疑難排解見 `android/README.md` 第 10 節。
+
 #### Mock OTP 登入流程
 1. App 登入頁輸入電話號碼 → 點「發送驗證碼」
 2. **睇後端 terminal log**，會印出 `OTP for +852...: 123456`
