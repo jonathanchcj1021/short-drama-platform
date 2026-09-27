@@ -1,7 +1,7 @@
 """CMS 路由：寫操作（需管理員權限）。"""
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.core.deps import get_db, require_admin
 from app.models.category import Category
@@ -13,6 +13,23 @@ from app.schemas.drama import DramaCreate, DramaOut, DramaUpdate
 from app.schemas.episode import EpisodeCreate, EpisodeOut, EpisodeUpdate
 
 router = APIRouter(prefix="/cms", tags=["cms"], dependencies=[Depends(require_admin)])
+
+
+# ---------- Dramas（管理用完整列表，上限 1000） ----------
+@router.get("/dramas", response_model=list[DramaOut])
+def list_cms_dramas(
+    db: Session = Depends(get_db),
+    skip: int = 0,
+    limit: int = 1000,
+):
+    stmt = (
+        select(Drama)
+        .options(selectinload(Drama.category))
+        .order_by(Drama.id.desc())
+        .offset(skip)
+        .limit(min(limit, 1000))
+    )
+    return db.scalars(stmt).all()
 
 
 # ---------- Categories ----------

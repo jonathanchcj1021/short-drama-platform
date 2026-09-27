@@ -131,7 +131,7 @@ export default function AdminPage() {
     setMsg(null);
     try {
       const [d, c] = await Promise.all([
-        apiClient<Drama[]>('/dramas', { auth: false, query: { limit: 100 } }),
+        apiClient<Drama[]>('/cms/dramas'),
         apiClient<Category[]>('/categories', { auth: false }),
       ]);
       setDramas(d ?? []);
