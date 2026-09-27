@@ -74,6 +74,14 @@ export interface OtpVerifyResponse {
   user: User;
 }
 
+/** 登入回應（帳號密碼 / OTP / Google 通用） */
+export interface TokenPair {
+  access_token: string;
+  refresh_token: string;
+  token_type?: string;
+  user: User;
+}
+
 /** API 錯誤結構 */
 export interface ApiError {
   message: string;

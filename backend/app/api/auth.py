@@ -6,11 +6,12 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.deps import get_current_user, get_db, get_redis
-from app.core.security import TokenError, create_access_token, create_refresh_token, decode_token
+from app.core.security import TokenError, create_access_token, create_refresh_token, decode_token, hash_password, verify_password
 from app.config import settings
 from app.models.user import User
 from app.schemas.auth import (
     AccessTokenOut,
+    LoginRequest,
     OTPRequest,
     OTPVerify,
     RefreshTokenRequest,
@@ -99,3 +100,25 @@ def refresh(body: RefreshTokenRequest, db: Session = Depends(get_db)):
 @router.get("/me", response_model=UserOut)
 def me(current_user: User = Depends(get_current_user)):
     return current_user
+
+
+@router.post("/login", response_model=TokenPair)
+def login(body: LoginRequest, db: Session = Depends(get_db)):
+    """帳號密碼登入：identifier 可以係 email 或手機號碼。"""
+    ident = body.identifier.strip().lower()
+    user = db.scalar(
+        select(User).where(
+            (User.email == ident) | (User.phone_number == body.identifier.strip())
+        )
+    )
+    if user is None or not user.password_hash or not verify_password(body.password, user.password_hash):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="帳號或密碼錯誤",
+        )
+
+    return TokenPair(
+        access_token=create_access_token(user.id),
+        refresh_token=create_refresh_token(user.id),
+        user=UserOut.model_validate(user),
+    )

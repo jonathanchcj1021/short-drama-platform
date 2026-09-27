@@ -111,6 +111,22 @@
   cursor: not-allowed;
 }
 
+.toggleLink {
+  background: transparent;
+  border: none;
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  padding: 0 4px;
+  white-space: nowrap;
+}
+
+.toggleLink:hover {
+  color: var(--color-text-secondary);
+}
+
 .googleBtn {
   width: 100%;
   background: #fff;

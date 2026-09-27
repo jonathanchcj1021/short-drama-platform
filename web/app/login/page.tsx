@@ -4,7 +4,7 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiClient, API_BASE_URL } from '@/lib/apiClient';
 import { saveAuth } from '@/lib/auth';
-import type { OtpRequestResponse, OtpVerifyResponse, User } from '@/types';
+import type { OtpRequestResponse, OtpVerifyResponse, TokenPair, User } from '@/types';
 import styles from './page.module.css';
 
 const COOLDOWN_SEC = 60;
@@ -34,10 +34,18 @@ function GoogleIcon() {
 
 export default function LoginPage() {
   const router = useRouter();
+
+  // 密碼登入（主要）
+  const [identifier, setIdentifier] = useState('');
+  const [password, setPassword] = useState('');
+
+  // OTP 登入（備用，預設收起）
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
   const [otpSent, setOtpSent] = useState(false);
   const [countdown, setCountdown] = useState(0);
+  const [showOtp, setShowOtp] = useState(false);
+
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -87,6 +95,31 @@ export default function LoginPage() {
     window.location.href = `${API_BASE_URL}/auth/google/authorize`;
   };
 
+  // ---------- 帳號密碼登入 ----------
+  const handlePasswordLogin = async (e: FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    if (!identifier.trim() || !password) {
+      setError('請輸入帳號（手機號碼或 email）同密碼');
+      return;
+    }
+    setBusy(true);
+    try {
+      const data = await apiClient<TokenPair>('/auth/login', {
+        method: 'POST',
+        auth: false,
+        body: { identifier: identifier.trim(), password },
+      });
+      saveAuth(data.access_token, data.refresh_token, data.user);
+      router.push('/');
+    } catch (err: unknown) {
+      setError((err as { message?: string }).message ?? '登入失敗');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // ---------- OTP 登入（備用） ----------
   const handleSendOtp = async () => {
     setError(null);
     if (!/^\+?[0-9]{8,15}$/.test(phone.trim())) {
@@ -136,9 +169,44 @@ export default function LoginPage() {
     <main className={styles.wrap}>
       <div className={styles.card}>
         <h1 className={styles.title}>歡迎回來</h1>
-        <p className={styles.subtitle}>電話驗證碼 或 Google 登入</p>
+        <p className={styles.subtitle}>登入短劇平台</p>
 
         {error && <p className={styles.error}>{error}</p>}
+
+        {/* 帳號密碼登入（主要） */}
+        <form onSubmit={handlePasswordLogin} className={styles.form}>
+          <label className={styles.field}>
+            <span>帳號（手機號碼或 email）</span>
+            <input
+              type="text"
+              placeholder="85263106930 或 you@example.com"
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
+              className={styles.input}
+              autoComplete="username"
+            />
+          </label>
+          <label className={styles.field}>
+            <span>密碼</span>
+            <input
+              type="password"
+              placeholder="請輸入密碼"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className={styles.input}
+              autoComplete="current-password"
+            />
+          </label>
+          <button type="submit" className={styles.primaryBtn} disabled={busy}>
+            {busy ? '登入中…' : '登入'}
+          </button>
+        </form>
+
+        <div className={styles.divider}>
+          <span className={styles.dividerLine} />
+          <span className={styles.dividerText}>或</span>
+          <span className={styles.dividerLine} />
+        </div>
 
         <button
           type="button"
@@ -147,69 +215,68 @@ export default function LoginPage() {
           disabled={busy}
         >
           <GoogleIcon />
-          {busy ? '處理中…' : '使用 Google 帳號登入'}
+          使用 Google 帳號登入
         </button>
 
+        {/* OTP 備用登入（可摺疊） */}
         <div className={styles.divider}>
           <span className={styles.dividerLine} />
-          <span className={styles.dividerText}>或用手機號碼</span>
+          <button
+            type="button"
+            className={styles.toggleLink}
+            onClick={() => setShowOtp((v) => !v)}
+          >
+            {showOtp ? '收起手機驗證碼登入' : '用手機驗證碼登入'}
+          </button>
           <span className={styles.dividerLine} />
         </div>
 
-        <form onSubmit={handleVerify} className={styles.form}>
-          <label className={styles.field}>
-            <span>手機號碼</span>
-            <input
-              type="tel"
-              inputMode="tel"
-              placeholder="請輸入手機號碼"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value.replace(/[^\d+]/g, ''))}
-              maxLength={16}
-              disabled={otpSent}
-              className={styles.input}
-            />
-          </label>
+        {showOtp && (
+          <form onSubmit={handleVerify} className={styles.form}>
+            <label className={styles.field}>
+              <span>手機號碼</span>
+              <input
+                type="tel"
+                inputMode="tel"
+                placeholder="請輸入手機號碼"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value.replace(/[^\d+]/g, ''))}
+                maxLength={16}
+                disabled={otpSent}
+                className={styles.input}
+              />
+            </label>
 
-          {!otpSent ? (
-            <button
-              type="button"
-              className={styles.primaryBtn}
-              onClick={handleSendOtp}
-              disabled={busy || countdown > 0}
-            >
-              {countdown > 0 ? `${countdown}s 後重發` : '發送驗證碼'}
-            </button>
-          ) : (
-            <>
-              <label className={styles.field}>
-                <span>驗證碼</span>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  placeholder="請輸入 6 位驗證碼"
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                  maxLength={6}
-                  className={styles.input}
-                />
-              </label>
-
-              <button type="submit" className={styles.primaryBtn} disabled={busy}>
-                {busy ? '驗證中…' : '驗證登入'}
-              </button>
-
+            {!otpSent ? (
               <button
                 type="button"
                 className={styles.ghostBtn}
                 onClick={handleSendOtp}
                 disabled={busy || countdown > 0}
               >
-                {countdown > 0 ? `${countdown}s 後可重發` : '重新發送驗證碼'}
+                {countdown > 0 ? `${countdown}s 後重發` : '發送驗證碼'}
               </button>
-            </>
-          )}
-        </form>
+            ) : (
+              <>
+                <label className={styles.field}>
+                  <span>驗證碼</span>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="請輸入 6 位驗證碼"
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    maxLength={6}
+                    className={styles.input}
+                  />
+                </label>
+                <button type="submit" className={styles.ghostBtn} disabled={busy}>
+                  {busy ? '驗證中…' : '驗證登入'}
+                </button>
+              </>
+            )}
+          </form>
+        )}
       </div>
     </main>
   );

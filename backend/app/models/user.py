@@ -15,6 +15,8 @@ class User(Base):
     phone_number: Mapped[str | None] = mapped_column(String(20), unique=True, index=True, nullable=True)
     email: Mapped[str | None] = mapped_column(String(255), unique=True, index=True, nullable=True)
     nickname: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # 密碼雜湊（帳號密碼登入）；NULL 表示未設定密碼
+    password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
     # CMS 管理權限
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false", nullable=False)
     created_at: Mapped[datetime] = mapped_column(
