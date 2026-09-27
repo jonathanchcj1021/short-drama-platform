@@ -44,6 +44,8 @@ export async function apiClient<T>(path: string, options: RequestOptions = {}): 
       body: body !== undefined ? JSON.stringify(body) : undefined,
       // 靜態 SPA 不共用 Cookie，一律帶 token
       credentials: 'omit',
+      // API response 唔好 cache，避免睇到舊數據
+      cache: 'no-store',
     });
   } catch (e) {
     const err: ApiError = { message: '網路連線失敗，請稍後再試', status: 0 };
