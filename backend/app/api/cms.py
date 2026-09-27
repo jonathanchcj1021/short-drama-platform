@@ -1,9 +1,9 @@
-"""最小 CMS 路由：寫操作（需登入，有 token 即可）。"""
+"""CMS 路由：寫操作（需管理員權限）。"""
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.core.deps import get_current_user, get_db
+from app.core.deps import get_db, require_admin
 from app.models.category import Category
 from app.models.drama import Drama
 from app.models.episode import Episode
@@ -12,7 +12,7 @@ from app.schemas.category import CategoryCreate, CategoryOut, CategoryUpdate
 from app.schemas.drama import DramaCreate, DramaOut, DramaUpdate
 from app.schemas.episode import EpisodeCreate, EpisodeOut, EpisodeUpdate
 
-router = APIRouter(prefix="/cms", tags=["cms"], dependencies=[Depends(get_current_user)])
+router = APIRouter(prefix="/cms", tags=["cms"], dependencies=[Depends(require_admin)])
 
 
 # ---------- Categories ----------

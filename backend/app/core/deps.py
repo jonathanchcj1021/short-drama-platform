@@ -49,3 +49,13 @@ def get_current_user(
             detail="使用者不存在",
         )
     return user
+
+
+def require_admin(current_user: User = Depends(get_current_user)) -> User:
+    """CMS 等管理操作要求 admin 權限。"""
+    if not current_user.is_admin:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="需要管理員權限",
+        )
+    return current_user
