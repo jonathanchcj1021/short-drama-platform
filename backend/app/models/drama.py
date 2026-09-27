@@ -18,6 +18,7 @@ class Drama(Base):
         ForeignKey("categories.id", ondelete="SET NULL"), nullable=True, index=True
     )
     release_year: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    episode_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
     is_completed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False

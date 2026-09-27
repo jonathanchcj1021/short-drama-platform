@@ -11,6 +11,7 @@ class DramaBase(BaseModel):
     cover_url: str | None = Field(None, max_length=1024)
     category_id: int | None = None
     release_year: int | None = Field(None, ge=1900, le=2100)
+    episode_count: int | None = Field(None, ge=0)
     is_completed: bool = False
 
 
@@ -24,6 +25,7 @@ class DramaUpdate(BaseModel):
     cover_url: str | None = Field(None, max_length=1024)
     category_id: int | None = None
     release_year: int | None = Field(None, ge=1900, le=2100)
+    episode_count: int | None = Field(None, ge=0)
     is_completed: bool | None = None
 
 
