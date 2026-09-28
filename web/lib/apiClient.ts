@@ -1,5 +1,5 @@
-import { getAccessToken, clearAuth } from './auth';
-import type { ApiError } from '@/types';
+import { getAccessToken, getRefreshToken, saveAuth, clearAuth } from './auth';
+import type { ApiError, User } from '@/types';
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
 // GitHub Pages 專案頁 basePath（與 next.config.js 一致）；dev 下係空字串
@@ -24,8 +24,29 @@ function buildUrl(path: string, query?: RequestOptions['query']): string {
   return url.toString();
 }
 
-/** 統一 fetch 包裝：自動帶 Authorization、處理 401 跳轉登入 */
-export async function apiClient<T>(path: string, options: RequestOptions = {}): Promise<T> {
+/** 嘗試用 refresh token 攞新 access token，成功返 true */
+async function tryRefreshToken(): Promise<boolean> {
+  const refreshToken = getRefreshToken();
+  if (!refreshToken) return false;
+  try {
+    const res = await fetch(`${BASE_URL}/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: refreshToken }),
+      cache: 'no-store',
+    });
+    if (!res.ok) return false;
+    const data = await res.json();
+    const user = JSON.parse(localStorage.getItem('user') || 'null');
+    saveAuth(data.access_token, refreshToken, user);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** 統一 fetch 包裝：自動帶 Authorization、401 時先嘗試 refresh，再失敗先跳登入 */
+export async function apiClient<T>(path: string, options: RequestOptions = {}, _retried = false): Promise<T> {
   const { method = 'GET', body, auth = true, query } = options;
 
   const headers: Record<string, string> = {
@@ -42,9 +63,7 @@ export async function apiClient<T>(path: string, options: RequestOptions = {}): 
       method,
       headers,
       body: body !== undefined ? JSON.stringify(body) : undefined,
-      // 靜態 SPA 不共用 Cookie，一律帶 token
       credentials: 'omit',
-      // API response 唔好 cache，避免睇到舊數據
       cache: 'no-store',
     });
   } catch (e) {
@@ -52,8 +71,12 @@ export async function apiClient<T>(path: string, options: RequestOptions = {}): 
     throw err;
   }
 
-  // 401：清除憑證並跳轉登入頁（需帶 basePath，GitHub Pages 唔喺根路徑）
-  if (res.status === 401) {
+  // 401：先嘗試 refresh token，成功就重試原 request
+  if (res.status === 401 && auth && !_retried) {
+    const refreshed = await tryRefreshToken();
+    if (refreshed) {
+      return apiClient<T>(path, options, true);
+    }
     clearAuth();
     if (typeof window !== 'undefined') {
       window.location.href = `${SITE_BASE_PATH}/login`;
