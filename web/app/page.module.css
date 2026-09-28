@@ -1,11 +1,31 @@
-/* ===== Hero ===== */
+/* ===== 頁面標題列 ===== */
+.pageHead {
+  margin-bottom: var(--spacing-4);
+}
+
+.pageTitle {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: var(--weight-bold);
+  color: var(--color-text-primary);
+}
+
+.pageSub {
+  margin: 4px 0 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-tertiary);
+}
+
+/* ===== Hero（精選劇集橫額） ===== */
 .hero {
   position: relative;
   width: 100%;
-  height: 420px;
-  border-radius: var(--radius-lg);
+  height: 230px;
+  border-radius: var(--radius-xl);
   overflow: hidden;
-  margin-bottom: var(--spacing-10);
+  margin-bottom: var(--spacing-6);
+  border: 1px solid var(--color-border-subtle);
 }
 
 .heroBg {
@@ -27,7 +47,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  height: 40%;
+  height: 45%;
   background: var(--gradient-hero-bottom);
 }
 
@@ -36,28 +56,26 @@
   left: 0;
   top: 50%;
   transform: translateY(-50%);
-  padding: 0 var(--spacing-8);
-  max-width: 620px;
+  padding: 0 var(--spacing-6);
+  max-width: 60%;
   z-index: 2;
 }
 
 .heroChip {
   display: inline-block;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  padding: 4px 12px;
+  background: var(--color-accent);
+  padding: 3px 12px;
   border-radius: var(--radius-full);
   font-size: var(--font-size-xs);
-  font-weight: var(--weight-medium);
-  color: var(--color-text-primary);
-  margin-bottom: var(--spacing-3);
+  font-weight: var(--weight-semibold);
+  color: #fff;
+  margin-bottom: var(--spacing-2);
 }
 
 .heroTitle {
-  margin: 0 0 var(--spacing-3);
+  margin: 0 0 var(--spacing-2);
   font-family: var(--font-display);
-  font-size: var(--font-size-display);
+  font-size: clamp(22px, 3vw, 34px);
   font-weight: var(--weight-bold);
   line-height: var(--line-height-tight);
   color: var(--color-text-primary);
@@ -68,11 +86,11 @@
 }
 
 .heroDesc {
-  margin: 0 0 var(--spacing-6);
+  margin: 0 0 var(--spacing-4);
   color: var(--color-text-secondary);
-  font-size: var(--font-size-lg);
+  font-size: var(--font-size-md);
   line-height: var(--line-height-normal);
-  max-width: 560px;
+  max-width: 480px;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -81,14 +99,14 @@
 
 .heroCtas {
   display: flex;
-  gap: var(--spacing-3);
+  gap: var(--spacing-2);
   flex-wrap: wrap;
 }
 
 .heroPrimary {
   background: var(--gradient-accent);
   color: var(--color-text-on-accent);
-  padding: 12px 28px;
+  padding: 10px 24px;
   border-radius: var(--radius-full);
   font-weight: var(--weight-semibold);
   font-size: var(--font-size-md);
@@ -102,82 +120,83 @@
 }
 
 .heroGhost {
-  background: transparent;
+  background: rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   color: var(--color-text-primary);
-  border: 1px solid var(--color-border-default);
-  padding: 12px 28px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  padding: 10px 24px;
   border-radius: var(--radius-full);
   font-weight: var(--weight-medium);
   font-size: var(--font-size-md);
-  transition: background var(--motion-fast) var(--ease-out),
-    border-color var(--motion-fast) var(--ease-out);
+  transition: background var(--motion-fast) var(--ease-out);
 }
 
 .heroGhost:hover {
-  background: var(--color-surface-raised);
-  border-color: var(--color-border-strong);
+  background: rgba(0, 0, 0, 0.55);
 }
 
-/* ===== Tabs ===== */
+/* ===== 分類 tab（橫向捲動） ===== */
 .tabs {
   display: flex;
-  flex-wrap: wrap;
   gap: var(--spacing-2);
-  margin-bottom: var(--spacing-6);
+  margin-bottom: var(--spacing-5);
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: none;
+}
+
+.tabs::-webkit-scrollbar {
+  display: none;
 }
 
 .tab {
-  background: transparent;
+  flex-shrink: 0;
+  background: var(--color-surface);
   color: var(--color-text-secondary);
-  border: 1px solid var(--color-border-default);
-  padding: 8px 18px;
+  border: 1px solid var(--color-border-subtle);
+  padding: 7px 16px;
   border-radius: var(--radius-full);
   cursor: pointer;
   font-size: var(--font-size-md);
+  white-space: nowrap;
   transition: all var(--motion-fast) var(--ease-out);
 }
 
 .tab:hover {
-  border-color: var(--color-border-strong);
   color: var(--color-text-primary);
+  border-color: var(--color-border-default);
 }
 
 .tabActive {
   background: var(--gradient-accent);
   color: var(--color-text-on-accent);
   border-color: transparent;
-  box-shadow: var(--shadow-accent);
+  font-weight: var(--weight-semibold);
 }
 
-/* ===== Grid ===== */
+/* ===== 劇集網格（9:16 直版海報） ===== */
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
-  gap: var(--spacing-5);
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--spacing-4);
 }
 
 /* ===== Skeleton ===== */
 .skeletonCard {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  aspect-ratio: 9 / 16;
+  border-radius: var(--radius-lg);
 }
 
 .skeletonCover {
   width: 100%;
-  aspect-ratio: 3 / 4;
-  border-radius: var(--radius-md);
+  height: 100%;
+  border-radius: var(--radius-lg);
 }
 
-.skeletonLine {
-  height: 14px;
-  border-radius: var(--radius-sm);
-}
-
+.skeletonLine,
 .skeletonLineSm {
-  height: 10px;
-  width: 50%;
-  border-radius: var(--radius-sm);
+  display: none;
 }
 
 /* ===== State box (empty / error) ===== */
@@ -235,14 +254,16 @@
 
 @media (max-width: 640px) {
   .hero {
-    height: 260px;
-    border-radius: var(--radius-md);
-    margin-bottom: var(--spacing-8);
+    height: 190px;
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--spacing-5);
   }
   .heroContent {
     padding: 0 var(--spacing-4);
+    max-width: 80%;
   }
   .grid {
-    gap: var(--spacing-3);
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--spacing-2);
   }
 }

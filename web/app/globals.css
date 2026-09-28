@@ -151,6 +151,44 @@ button {
   color: var(--color-text-primary);
 }
 
+/* ===== 共用：漸層封面佔位（PosterPlaceholder） ===== */
+.ppGlow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  mix-blend-mode: screen;
+}
+
+.ppWatermark {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -58%);
+  font-size: 56px;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.14);
+  padding-left: 8px;
+  pointer-events: none;
+}
+
+.ppTitle {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 16px;
+  font-family: var(--font-display);
+  font-weight: var(--weight-bold);
+  font-size: 19px;
+  line-height: 1.35;
+  color: rgba(255, 255, 255, 0.92);
+  text-shadow: 0 2px 16px rgba(0, 0, 0, 0.45);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
 /* 深色捲軸 */
 ::-webkit-scrollbar {
   width: 10px;

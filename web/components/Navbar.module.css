@@ -26,15 +26,29 @@
 }
 
 .logoMark {
-  width: 24px;
-  height: 24px;
+  position: relative;
+  width: 26px;
+  height: 26px;
   border-radius: var(--radius-sm);
   background: var(--gradient-accent);
+  box-shadow: var(--shadow-accent);
   transition: transform var(--motion-base) var(--ease-spring);
 }
 
+/* 中間播放三角 */
+.logoMark::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 54%;
+  transform: translate(-50%, -50%);
+  border-style: solid;
+  border-width: 5px 0 5px 8px;
+  border-color: transparent transparent transparent #fff;
+}
+
 .brand:hover .logoMark {
-  transform: scale(1.05);
+  transform: scale(1.06);
 }
 
 .brandText {

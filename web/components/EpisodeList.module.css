@@ -3,15 +3,17 @@
   margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: var(--spacing-3);
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: var(--spacing-2);
 }
 
 .item {
+  position: relative;
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 6px;
-  padding: 14px;
+  padding: 16px 8px 12px;
   background: var(--color-surface);
   border: 1px solid var(--color-border-subtle);
   border-radius: var(--radius-md);
@@ -29,26 +31,39 @@
 .current {
   background: var(--color-accent-soft);
   border-color: var(--color-accent);
-  box-shadow: inset 3px 0 0 var(--color-accent);
 }
 
 .num {
-  font-size: var(--font-size-sm);
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: var(--weight-bold);
+  line-height: 1;
+  color: var(--color-text-primary);
+}
+
+.current .num {
   color: var(--color-accent);
-  font-weight: var(--weight-semibold);
 }
 
 .title {
-  font-size: var(--font-size-md);
+  width: 100%;
+  font-size: 11px;
   color: var(--color-text-secondary);
+  text-align: center;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
+.now {
+  font-size: 10px;
+  font-weight: var(--weight-semibold);
+  color: var(--color-accent);
+}
+
 .watched {
-  font-size: var(--font-size-sm);
-  color: var(--color-success);
+  font-size: 10px;
+  color: var(--color-text-tertiary);
 }
 
 .empty {

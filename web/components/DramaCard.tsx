@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import PosterPlaceholder from './PosterPlaceholder';
 import type { Drama } from '@/types';
 import styles from './DramaCard.module.css';
 
@@ -15,32 +16,31 @@ export default function DramaCard({ drama }: Props) {
   return (
     <Link href={`/drama/?id=${drama.id}`} className={styles.card}>
       {hasCover ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={drama.cover_url} alt={drama.title} className={styles.cover} />
+        <>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={drama.cover_url} alt={drama.title} className={styles.cover} loading="lazy" />
+          <div className={styles.scrim} />
+        </>
       ) : (
-        <div className={styles.placeholder}>
-          <span className={styles.placeholderTitle}>{drama.title}</span>
-        </div>
+        <PosterPlaceholder title={drama.title} className={styles.cover} />
       )}
-
-      {/* 底部 scrim */}
-      <div className={styles.scrim} />
 
       {/* 頂左分類 chip */}
       <span className={styles.chip}>{categoryLabel}</span>
+
+      {/* 集數 badge（右上角） */}
+      {drama.episode_count != null && (
+        <span className={styles.badge}>{drama.episode_count} 集</span>
+      )}
 
       {/* 正中間 hover 播放鈕 */}
       <span className={styles.playBtn} aria-hidden>
         ▶
       </span>
 
-      {/* 底部文字區 */}
+      {/* 底部劇名 */}
       <div className={styles.info}>
         <h3 className={styles.title}>{drama.title}</h3>
-        <div className={styles.meta}>
-          <span className={styles.dot} />
-          <span>{drama.episode_count != null ? `${drama.episode_count} 集` : '更新中'}</span>
-        </div>
       </div>
     </Link>
   );

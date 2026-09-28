@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { apiClient } from '@/lib/apiClient';
@@ -111,37 +112,69 @@ function PlayInner() {
   }
 
   return (
-    <div className={styles.playerWrap}>
-      <video
-        ref={videoRef}
-        src={videoUrl}
-        controls
-        autoPlay
-        className={styles.video}
-      />
-      <div className={styles.info}>
-        <h1 className={styles.title}>
-          {episode?.drama_title ? `${episode.drama_title} · ` : ''}
-          第 {episode?.episode_number} 集
-        </h1>
-        <p className={styles.epTitle}>{episode?.title}</p>
-        <div className={styles.nav}>
-          <button
-            type="button"
-            className={styles.navGhost}
-            onClick={goPrev}
-            disabled={!episode?.prev_episode_id}
-          >
-            上一集
-          </button>
-          <button
-            type="button"
-            className={styles.navPrimary}
-            onClick={goNext}
-            disabled={!episode?.next_episode_id}
-          >
-            下一集
-          </button>
+    <div className={styles.stage}>
+      <div className={styles.phone}>
+        <video
+          ref={videoRef}
+          src={videoUrl}
+          controls
+          autoPlay
+          playsInline
+          className={styles.video}
+        />
+
+        {/* 頂部 overlay：返回 + 標題 */}
+        <div className={styles.topBar}>
+          <Link href={episode?.drama_id ? `/drama/?id=${episode.drama_id}` : '/'} className={styles.backBtn}>
+            ‹ 返回
+          </Link>
+          <span className={styles.topTitle}>
+            {episode?.drama_title ? episode.drama_title : '播放中'}
+          </span>
+        </div>
+
+        {/* 左右浮動切集（桌面） */}
+        <button
+          type="button"
+          className={`${styles.sideBtn} ${styles.sidePrev}`}
+          onClick={goPrev}
+          disabled={!episode?.prev_episode_id}
+          aria-label="上一集"
+        >
+          ‹
+        </button>
+        <button
+          type="button"
+          className={`${styles.sideBtn} ${styles.sideNext}`}
+          onClick={goNext}
+          disabled={!episode?.next_episode_id}
+          aria-label="下一集"
+        >
+          ›
+        </button>
+
+        {/* 底部 overlay：集名 + 上下集 */}
+        <div className={styles.bottomBar}>
+          <h1 className={styles.title}>第 {episode?.episode_number} 集</h1>
+          <p className={styles.epTitle}>{episode?.title}</p>
+          <div className={styles.nav}>
+            <button
+              type="button"
+              className={styles.navGhost}
+              onClick={goPrev}
+              disabled={!episode?.prev_episode_id}
+            >
+              上一集
+            </button>
+            <button
+              type="button"
+              className={styles.navPrimary}
+              onClick={goNext}
+              disabled={!episode?.next_episode_id}
+            >
+              下一集
+            </button>
+          </div>
         </div>
       </div>
     </div>

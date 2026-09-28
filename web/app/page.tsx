@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import DramaCard from '@/components/DramaCard';
+import PosterPlaceholder from '@/components/PosterPlaceholder';
 import { apiClient } from '@/lib/apiClient';
 import type { Category, Drama } from '@/types';
 import styles from './page.module.css';
@@ -43,12 +44,19 @@ export default function HomePage() {
 
   return (
     <main className="container">
+      <div className={styles.pageHead}>
+        <h1 className={styles.pageTitle}>短劇精選</h1>
+        <p className={styles.pageSub}>熱門好劇，一集接一集</p>
+      </div>
+
       {/* ===== Hero 區（精選劇集，取 dramas[0]） ===== */}
       {showHero && (
         <section className={styles.hero}>
-          {featured.cover_url && (
+          {featured.cover_url ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={featured.cover_url} alt={featured.title} className={styles.heroBg} />
+          ) : (
+            <PosterPlaceholder title={featured.title} className={styles.heroBg} />
           )}
           <div className={styles.heroScrimX} />
           <div className={styles.heroScrimBottom} />

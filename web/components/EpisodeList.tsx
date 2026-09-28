@@ -6,7 +6,7 @@ import styles from './EpisodeList.module.css';
 
 interface Props {
   episodes: Episode[];
-  /** 目前觀看到的 episodeId（用於標記已觀看） */
+  /** 目前觀看到的 episodeId（用於標記已觀看／正在播放） */
   currentEpisodeId?: number;
   /** 觀看進度對照表：episodeId -> positionSec */
   progressMap?: Record<number, number>;
@@ -28,13 +28,13 @@ export default function EpisodeList({ episodes, currentEpisodeId, progressMap = 
               href={`/play/?episode=${ep.id}`}
               className={`${styles.item} ${isCurrent ? styles.current : ''}`}
             >
-              <span className={styles.num}>第 {ep.episode_number} 集</span>
-              <span className={styles.title}>{ep.title}</span>
-              {watched && (
-                <span className={styles.watched}>
-                  <span aria-hidden>✓ </span>已觀看
-                </span>
-              )}
+              <span className={styles.num}>{ep.episode_number}</span>
+              <span className={styles.title}>{ep.title || `第 ${ep.episode_number} 集`}</span>
+              {isCurrent ? (
+                <span className={styles.now}>播放中</span>
+              ) : watched ? (
+                <span className={styles.watched}>已看</span>
+              ) : null}
             </Link>
           </li>
         );

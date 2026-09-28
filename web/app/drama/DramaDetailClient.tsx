@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import EpisodeList from '@/components/EpisodeList';
+import PosterPlaceholder from '@/components/PosterPlaceholder';
 import { apiClient } from '@/lib/apiClient';
 import { isLoggedIn } from '@/lib/auth';
 import type { DramaDetail, Progress } from '@/types';
@@ -93,32 +94,44 @@ export default function DramaDetailClient() {
 
   return (
     <main className="container">
+      {/* 朦朧封面背景 */}
+      {drama.cover_url && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={drama.cover_url} alt="" className={styles.backdrop} aria-hidden />
+      )}
+      <div className={styles.backdropScrim} />
+
       <div className={styles.header}>
         {drama.cover_url ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={drama.cover_url} alt={drama.title} className={styles.cover} />
         ) : (
-          <div className={styles.coverPlaceholder}>{drama.title}</div>
+          <PosterPlaceholder title={drama.title} className={styles.cover} />
         )}
         <div className={styles.info}>
+          <Link href="/" className={styles.backLink}>
+            ← 返回
+          </Link>
           <h1 className={styles.title}>{drama.title}</h1>
-          <p className={styles.meta}>
+          <div className={styles.tags}>
             <span className={styles.tag}>{categoryLabel}</span>
-            {drama.episode_count != null && <span>{drama.episode_count} 集</span>}
-          </p>
+            {drama.episode_count != null && <span className={styles.tag}>{drama.episode_count} 集</span>}
+            {drama.release_year != null && <span className={styles.tag}>{drama.release_year}</span>}
+            {drama.is_completed && <span className={styles.tagGold}>已完結</span>}
+          </div>
           <p className={styles.desc}>{drama.description}</p>
           {progress && lastEpisodeNum != null && (
             <p className={styles.progressPill}>上次看到：第 {lastEpisodeNum} 集</p>
           )}
           {resumeEpisodeId != null && (
             <Link href={`/play/?episode=${resumeEpisodeId}`} className={styles.cta}>
-              ▶ 開始觀看
+              ▶ {progress ? '繼續觀看' : '開始觀看'}
             </Link>
           )}
         </div>
       </div>
 
-      <h2 className={styles.sectionTitle}>集數列表</h2>
+      <h2 className={styles.sectionTitle}>劇集</h2>
       <EpisodeList
         episodes={drama.episodes ?? []}
         currentEpisodeId={progress?.episode_id}
