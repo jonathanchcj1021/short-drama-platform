@@ -4,10 +4,8 @@ import { useEffect, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { apiClient, API_BASE_URL } from '@/lib/apiClient';
 import { saveAuth } from '@/lib/auth';
-import type { OtpRequestResponse, OtpVerifyResponse, TokenPair, User } from '@/types';
+import type { TokenPair, User } from '@/types';
 import styles from './page.module.css';
-
-const COOLDOWN_SEC = 60;
 
 function GoogleIcon() {
   return (
@@ -48,13 +46,6 @@ export default function LoginPage() {
   const [regConfirm, setRegConfirm] = useState('');
   const [regNickname, setRegNickname] = useState('');
 
-  // OTP 登入（備用，預設收起）
-  const [phone, setPhone] = useState('');
-  const [otp, setOtp] = useState('');
-  const [otpSent, setOtpSent] = useState(false);
-  const [countdown, setCountdown] = useState(0);
-  const [showOtp, setShowOtp] = useState(false);
-
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -90,13 +81,6 @@ export default function LoginPage() {
     const err = q.get('error');
     if (err) setError(err);
   }, [router]);
-
-  // 倒數計時
-  useEffect(() => {
-    if (countdown <= 0) return;
-    const t = setTimeout(() => setCountdown((s) => s - 1), 1000);
-    return () => clearTimeout(t);
-  }, [countdown]);
 
   const handleGoogleLogin = () => {
     setError(null);
@@ -164,52 +148,6 @@ export default function LoginPage() {
       router.push('/');
     } catch (err: unknown) {
       setError((err as { message?: string }).message ?? '註冊失敗');
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  // ---------- OTP 登入（備用） ----------
-  const handleSendOtp = async () => {
-    setError(null);
-    if (!/^\+?[0-9]{8,15}$/.test(phone.trim())) {
-      setError('請輸入正確的手機號碼（可加國碼，如 +852）');
-      return;
-    }
-    setBusy(true);
-    try {
-      await apiClient<OtpRequestResponse>('/auth/otp/request', {
-        method: 'POST',
-        auth: false,
-        body: { phone_number: phone.trim() },
-      });
-      setOtpSent(true);
-      setCountdown(COOLDOWN_SEC);
-    } catch (e: unknown) {
-      setError((e as { message?: string }).message ?? '發送失敗');
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const handleVerify = async (e: FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    if (!/^\d{6}$/.test(otp.trim())) {
-      setError('請輸入 6 位數驗證碼');
-      return;
-    }
-    setBusy(true);
-    try {
-      const data = await apiClient<OtpVerifyResponse>('/auth/otp/verify', {
-        method: 'POST',
-        auth: false,
-        body: { phone_number: phone.trim(), code: otp.trim() },
-      });
-      saveAuth(data.access_token, data.refresh_token, data.user);
-      router.push('/');
-    } catch (err: unknown) {
-      setError((err as { message?: string }).message ?? '驗證失敗');
     } finally {
       setBusy(false);
     }
@@ -285,66 +223,6 @@ export default function LoginPage() {
               <GoogleIcon />
               使用 Google 帳號登入
             </button>
-
-            {/* OTP 備用登入（可摺疊） */}
-            <div className={styles.divider}>
-              <span className={styles.dividerLine} />
-              <button
-                type="button"
-                className={styles.toggleLink}
-                onClick={() => setShowOtp((v) => !v)}
-              >
-                {showOtp ? '收起手機驗證碼登入' : '用手機驗證碼登入'}
-              </button>
-              <span className={styles.dividerLine} />
-            </div>
-
-            {showOtp && (
-              <form onSubmit={handleVerify} className={styles.form}>
-                <label className={styles.field}>
-                  <span>手機號碼</span>
-                  <input
-                    type="tel"
-                    inputMode="tel"
-                    placeholder="請輸入手機號碼"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value.replace(/[^\d+]/g, ''))}
-                    maxLength={16}
-                    disabled={otpSent}
-                    className={styles.input}
-                  />
-                </label>
-
-                {!otpSent ? (
-                  <button
-                    type="button"
-                    className={styles.ghostBtn}
-                    onClick={handleSendOtp}
-                    disabled={busy || countdown > 0}
-                  >
-                    {countdown > 0 ? `${countdown}s 後重發` : '發送驗證碼'}
-                  </button>
-                ) : (
-                  <>
-                    <label className={styles.field}>
-                      <span>驗證碼</span>
-                      <input
-                        type="text"
-                        inputMode="numeric"
-                        placeholder="請輸入 6 位驗證碼"
-                        value={otp}
-                        onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                        maxLength={6}
-                        className={styles.input}
-                      />
-                    </label>
-                    <button type="submit" className={styles.ghostBtn} disabled={busy}>
-                      {busy ? '驗證中…' : '驗證登入'}
-                    </button>
-                  </>
-                )}
-              </form>
-            )}
           </>
         ) : (
           <>
@@ -390,7 +268,6 @@ export default function LoginPage() {
                   placeholder="想點樣稱呼你"
                   value={regNickname}
                   onChange={(e) => setRegNickname(e.target.value)}
-                  className={styles.input}
                   maxLength={64}
                 />
               </label>

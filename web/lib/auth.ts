@@ -42,6 +42,12 @@ export function saveAuth(accessToken: string, refreshToken: string, user: User):
   window.localStorage.setItem(USER_KEY, JSON.stringify(user));
 }
 
+/** 只更新本機快取嘅使用者資料（唔動 token） */
+export function saveUser(user: User): void {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(USER_KEY, JSON.stringify(user));
+}
+
 /** 登出：清除本機憑證 */
 export function clearAuth(): void {
   if (typeof window === 'undefined') return;

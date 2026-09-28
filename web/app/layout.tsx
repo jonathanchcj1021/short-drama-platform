@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Navbar from '@/components/Navbar';
+import AuthBootstrap from '@/components/AuthBootstrap';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -23,6 +24,7 @@ export default function RootLayout({
         />
       </head>
       <body>
+        <AuthBootstrap />
         <Navbar />
         {children}
       </body>

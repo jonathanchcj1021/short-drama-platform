@@ -1,4 +1,4 @@
-import { getAccessToken, getRefreshToken, saveAuth, clearAuth } from './auth';
+import { getAccessToken, getRefreshToken, saveAuth, saveUser, clearAuth } from './auth';
 import type { ApiError, User } from '@/types';
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
@@ -110,3 +110,43 @@ export async function apiClient<T>(path: string, options: RequestOptions = {}, _
 
 export { BASE_URL };
 export const API_BASE_URL = BASE_URL;
+
+/**
+ * 應用啟動時主動驗證一次 session（client-side bootstrapping）：
+ * - 冇 token 就唔做任何嘢；
+ * - 有 access token 就打 /auth/me，200 即有效，並順手更新本機 user；
+ * - /auth/me 返 401 就用 refresh token 換新 access token；
+ * - refresh 都失敗就清除憑證（各頁面自己會跳 /login）。
+ * 咁樣 reload 之後唔會出現「access token 過期 → UI 閃一下先走」嘅狀況。
+ */
+export async function bootstrapSession(): Promise<void> {
+  if (typeof window === 'undefined') return;
+  const accessToken = getAccessToken();
+  const refreshToken = getRefreshToken();
+  if (!accessToken && !refreshToken) return;
+
+  // 有 access token：先試 /auth/me
+  if (accessToken) {
+    try {
+      const res = await fetch(`${BASE_URL}/auth/me`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        credentials: 'omit',
+        cache: 'no-store',
+      });
+      if (res.ok) {
+        const user = (await res.json()) as User;
+        saveUser(user);
+        return;
+      }
+      if (res.status !== 401) return; // 5xx 等：唔好亂清，交畀之後嘅 request
+    } catch {
+      return; // 網絡問題：唔好亂清
+    }
+  }
+
+  // access token 無效 / 冇：嘗試用 refresh token 換新
+  const ok = await tryRefreshToken();
+  if (!ok) {
+    clearAuth();
+  }
+}
