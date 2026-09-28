@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { getUser, isLoggedIn, clearAuth } from '@/lib/auth';
 import type { User } from '@/types';
@@ -9,13 +9,17 @@ import styles from './Navbar.module.css';
 
 export default function Navbar() {
   const router = useRouter();
+  const pathname = usePathname();
   const [user, setUser] = useState<User | null>(null);
   const [loggedIn, setLoggedIn] = useState(false);
 
+  // Navbar 喺 root layout，client-side 轉頁時唔會 remount。
+  // 所以每當 route（pathname）改變，都重新讀一次 localStorage，
+  // 避免登入 / 登出之後 UI 仲停留在舊狀態。
   useEffect(() => {
     setUser(getUser());
     setLoggedIn(isLoggedIn());
-  }, []);
+  }, [pathname]);
 
   const handleLogout = () => {
     clearAuth();
