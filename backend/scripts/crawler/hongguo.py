@@ -9,13 +9,16 @@ CSS class 名稱帶 CSS-Module hash 後綴，parser 用語義前綴（class*="pc
 from __future__ import annotations
 
 import asyncio
+import logging
 import re
 from typing import Any
 
 import httpx
 from bs4 import BeautifulSoup, Tag
 
-from scripts.crawler.items import ShortDramaItem
+from scripts.crawler.items import ScrapedEpisode, ShortDramaItem
+
+log = logging.getLogger("crawler.hongguo")
 
 BASE_URL = "https://hongguoduanju.com"
 RANK_URL = f"{BASE_URL}/rank/hot-drama"
@@ -40,6 +43,16 @@ DEFAULT_HEADERS = {
 _SERIES_ID_RE = re.compile(r"series_id=(\d+)")
 _NUM_RE = re.compile(r"(\d+(?:\.\d+)?)")
 _EPISODE_RE = re.compile(r"(\d+)\s*集")
+
+# detail 頁入面「公開解鎖」嘅集格：<a href="/player/..."><div ...>N</div></a>
+# 其餘鎖住嘅集只係普通 <div>，冇 href，即係要登入 / App 先解鎖。
+_PUBLIC_EP_RE = re.compile(
+    r'<a href="(/player/[^"]+)"[^>]*>\s*'
+    r'<div class="pc-episode-cell-text[^"]*">(\d+)</div>'
+)
+# player 頁 SSR ld+json VideoObject：真實片 URL 就係呢度。
+_CONTENT_URL_RE = re.compile(r'"contentUrl":"([^"]+)"')
+_VIDEO_NAME_RE = re.compile(r'"@type":"VideoObject"[^}]*?"name":"([^"]+)"')
 
 
 def _extract_series_id(href: str | None) -> str | None:
@@ -191,6 +204,80 @@ class HongguoCrawler:
         html = await self._get(HOME_URL)
         return self._parse_home(html)
 
+    # ---------- detail 頁：公開集數列表 ----------
+
+    @staticmethod
+    def parse_detail_episodes(html: str) -> list[ScrapedEpisode]:
+        """由 detail 頁 SSR HTML 抽出「公開解鎖」嘅集。
+
+        紅果將絕大部分集數鎖住（普通 <div>，冇 href，要登入／App 先解鎖），
+        只有頭幾集係 <a href="/player/..."> 公開連結。呢度只抽得到公開嗰幾集。
+        """
+        episodes: list[ScrapedEpisode] = []
+        seen: set[int] = set()
+        for href, num in _PUBLIC_EP_RE.findall(html):
+            n = int(num)
+            if n in seen:
+                continue
+            seen.add(n)
+            episodes.append(
+                ScrapedEpisode(episode_number=n, player_path=href, title=f"第{n}集")
+            )
+        episodes.sort(key=lambda e: e.episode_number)
+        return episodes
+
+    async def fetch_detail_episodes(self, series_id: str) -> list[ScrapedEpisode]:
+        url = f"{BASE_URL}/detail?series_id={series_id}"
+        html = await self._get(url)
+        return self.parse_detail_episodes(html)
+
+    # ---------- player 頁：真實片 URL ----------
+
+    @staticmethod
+    def parse_player_video(html: str) -> tuple[str | None, str | None]:
+        """由 player 頁 SSR ld+json ``VideoObject.contentUrl`` 抽真實片 URL。
+
+        回傳 (video_url, video_name)。抽唔到就 (None, None)。
+        """
+        m = _CONTENT_URL_RE.search(html)
+        if not m:
+            return None, None
+        video_url = m.group(1).replace("&amp;", "&")
+        nm = _VIDEO_NAME_RE.search(html)
+        video_name = nm.group(1) if nm else None
+        return video_url, video_name
+
+    async def fetch_player_video(self, player_path: str) -> tuple[str | None, str | None]:
+        url = player_path if player_path.startswith("http") else f"{BASE_URL}{player_path}"
+        html = await self._get(url)
+        return self.parse_player_video(html)
+
+    async def enrich_item_with_episodes(
+        self, item: ShortDramaItem, max_episodes: int = 3
+    ) -> ShortDramaItem:
+        """入 detail 頁拎公開集，再逐集入 player 頁抽真實 video_url。
+
+        任何一步失敗都唔會 raise（回傳已抽到嘅部份），保證 metadata 匯入唔中斷。
+        """
+        try:
+            public_eps = await self.fetch_detail_episodes(item.series_id)
+        except Exception as exc:  # noqa: BLE001
+            log.warning("detail 頁抓取失敗 series_id=%s: %s", item.series_id, exc)
+            return item
+
+        for ep in public_eps[:max_episodes]:
+            try:
+                video_url, vname = await self.fetch_player_video(ep.player_path or "")
+            except Exception as exc:  # noqa: BLE001
+                log.warning("player 頁抓取失敗 %s: %s", ep.player_path, exc)
+                continue
+            if video_url:
+                ep.video_url = video_url
+                if vname:
+                    ep.title = vname
+                item.episodes.append(ep)
+        return item
+
     # ---------- 合併 ----------
 
     @staticmethod
@@ -217,10 +304,18 @@ class HongguoCrawler:
                 merged.append(item)
         return merged
 
-    async def crawl(self, limit: int = 20) -> list[ShortDramaItem]:
+    async def crawl(
+        self,
+        limit: int = 20,
+        with_episodes: bool = False,
+        max_episodes_per_drama: int = 3,
+    ) -> list[ShortDramaItem]:
         """抓 4 個每日熱播榜＋首頁劇卡，合併後返回首 `limit` 部。
 
         排序：綜合榜（hot）順序優先，其後係真人劇/AI劇/漫劇榜，最後先係淨喺首頁出現嘅劇。
+
+        ``with_episodes=True`` 時，逐部劇入 detail 頁拎公開集、再入 player 頁抽真片 URL
+        （每部最多 ``max_episodes_per_drama`` 集，因為紅果頭幾集先公開）。
         """
         per_list = max(limit // len(RANK_LISTS), 5)
         all_items: list[ShortDramaItem] = []
@@ -228,4 +323,15 @@ class HongguoCrawler:
             all_items.extend(await self.fetch_rank(limit=per_list, list_key=key))
         home_items = await self.fetch_home()
         merged = self.merge(all_items, home_items)
-        return merged[:limit]
+        merged = merged[:limit]
+
+        if with_episodes:
+            enriched: list[ShortDramaItem] = []
+            for item in merged:
+                enriched.append(
+                    await self.enrich_item_with_episodes(
+                        item, max_episodes=max_episodes_per_drama
+                    )
+                )
+            merged = enriched
+        return merged

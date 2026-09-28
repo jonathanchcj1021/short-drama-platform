@@ -27,6 +27,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from app.database import SessionLocal  # noqa: E402
 from app.models.category import Category  # noqa: E402
 from app.models.drama import Drama  # noqa: E402
+from app.models.episode import Episode  # noqa: E402
 from scripts.crawler.hongguo import DEFAULT_HEADERS, HongguoCrawler  # noqa: E402
 from scripts.crawler.items import ShortDramaItem  # noqa: E402
 
@@ -83,9 +84,52 @@ def get_or_create_category(db, name: str) -> Category:
     return cat
 
 
+def _upsert_episodes(db, drama: Drama, item: ShortDramaItem, stats: dict) -> None:
+    """將爬到嘅公開集 upsert 入 episodes（按 drama_id + episode_number）。
+
+    只有抽到真實 video_url 嘅集先會寫入/更新；抽唔到片 URL 嘅集唔郁，
+    避免用 placeholder 覆蓋已有資料。
+    """
+    for ep in item.episodes:
+        if not ep.video_url:
+            continue
+        title = _sanitize(ep.title) or f"第{ep.episode_number}集"
+        video_url = _sanitize(ep.video_url)
+        if not video_url:
+            continue
+        row = (
+            db.query(Episode)
+            .filter(Episode.drama_id == drama.id, Episode.episode_number == ep.episode_number)
+            .first()
+        )
+        if row:
+            row.title = title
+            row.video_url = video_url
+            if ep.duration:
+                row.duration = ep.duration
+            stats["episodes_updated"] += 1
+        else:
+            db.add(
+                Episode(
+                    drama_id=drama.id,
+                    episode_number=ep.episode_number,
+                    title=title,
+                    video_url=video_url,
+                    duration=ep.duration,
+                )
+            )
+            stats["episodes_created"] += 1
+
+
 def import_items(db, items: list[ShortDramaItem]) -> dict:
-    """將爬回嚟嘅劇集 upsert 入平台資料庫（按標題去重）。"""
-    stats = {"created": 0, "updated": 0, "categories_created": 0}
+    """將爬回嚟嘅劇集 upsert 入平台資料庫（按標題去重），並順帶 upsert 公開集。"""
+    stats = {
+        "created": 0,
+        "updated": 0,
+        "categories_created": 0,
+        "episodes_created": 0,
+        "episodes_updated": 0,
+    }
     for item in items:
         title = _sanitize(item.title) or ""
         if not title:
@@ -112,19 +156,24 @@ def import_items(db, items: list[ShortDramaItem]) -> dict:
             for k, v in fields.items():
                 if v is not None:
                     setattr(existing, k, v)
+            drama = existing
             stats["updated"] += 1
         else:
-            db.add(Drama(title=title, **fields))
+            drama = Drama(title=title, **fields)
+            db.add(drama)
             stats["created"] += 1
+        db.flush()  # 攞到 drama.id 先可以綁 episodes
+
+        _upsert_episodes(db, drama, item, stats)
     db.commit()
     return stats
 
 
-async def run(source: str, limit: int, delay: float) -> list[ShortDramaItem]:
+async def run(source: str, limit: int, delay: float, with_episodes: bool) -> list[ShortDramaItem]:
     async with httpx.AsyncClient(headers=DEFAULT_HEADERS, timeout=30.0, follow_redirects=True) as client:
         if source == "hongguo":
             crawler = HongguoCrawler(client, request_delay=delay)
-            return await crawler.crawl(limit=limit)
+            return await crawler.crawl(limit=limit, with_episodes=with_episodes)
         raise ValueError(f"未知來源: {source}")
 
 
@@ -134,16 +183,22 @@ def main() -> None:
     parser.add_argument("--dry-run", action="store_true", help="只打印，唔寫入 DB")
     parser.add_argument("--delay", type=float, default=0.6)
     parser.add_argument("--source", default="hongguo", choices=["hongguo"])
+    parser.add_argument(
+        "--with-episodes",
+        action="store_true",
+        help="入 detail/player 頁抽每集真片 URL 並 upsert 入 episodes",
+    )
     args = parser.parse_args()
 
-    items = asyncio.run(run(args.source, args.limit, args.delay))
+    items = asyncio.run(run(args.source, args.limit, args.delay, args.with_episodes))
     log.info("爬到 %d 部劇", len(items))
 
     if args.dry_run:
         for i in items[:10]:
+            nreal = sum(1 for e in i.episodes if e.video_url)
             print(
                 f"[{i.rank or '-'}] {i.title} | {i.primary_tag or '無分類'} | "
-                f"{i.episode_count or '?'}集 | {i.heat or '?'}萬熱度 | 來源ID {i.series_id}"
+                f"{i.episode_count or '?'}集 | 公開真片 {nreal} 集 | 來源ID {i.series_id}"
             )
         print("...")
         print("（dry-run 模式：未有寫入資料庫）")
@@ -154,8 +209,10 @@ def main() -> None:
         stats = import_items(db, items)
         new_cats = db.query(Category).filter(Category.slug.like("auto-%")).count()
         log.info(
-            "匯入完成：新增 %d 部、更新 %d 部；auto- 開頭分類共 %d 個",
+            "匯入完成：新增 %d 部、更新 %d 部；auto- 開頭分類共 %d 個；"
+            "集數新增 %d、更新 %d",
             stats["created"], stats["updated"], new_cats,
+            stats["episodes_created"], stats["episodes_updated"],
         )
     finally:
         db.close()
