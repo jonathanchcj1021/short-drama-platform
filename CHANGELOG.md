@@ -2,6 +2,14 @@
 
 本檔記錄每次 release。格式：版本、日期、更新內容、Git commit short SHA。
 
+## [未發佈] - 2026-09-29
+Commit: _（隨下次 release 補）_
+
+### 調查 — 優酷 embed 播放器複測（不可行，無代碼變更、無 deploy）
+- 實測優酷官方 iframe embed 播放器（`player.youku.com/embed/{vid}`）對平台 40 部優酷劇嘅正片：攞 vid 方法成功且可重現（劇集頁 `window.__INITIAL_DATA__` 每集 `action_value`；抽樣 3 部劇 78/78 集 vid 全部攞到，唔使登入），但播放層面——**VIP 集**（每劇頭 2–3 集之後全部）即時硬 VIP 牆「該視頻僅限 VIP 會員觀看」；**免費試看集**（頭 2–3 集）只出約 35 秒正片試看＋前後貼片廣告＋「看完整視頻」長駐，撳「跳過廣告」跳去 `pay.youku.com/buy` 付費頁。
+- 結論：embed 忠實反映優酷 paywall，**無法喺平台內合法播放完整正片**；維持 v1.2.1 嘅「資料卡 · 未接片源」誠實標示，唔郁代碼。
+- 完整證據：`backend/scripts/crawler/EMBED_PLAY_PROBE.md`（截圖 `embed_probe_assets/` ＋ 78 集 vid 清單 `youku_embed_probe_vids.json`）。
+
 ## [v1.2.1] - 2026-09-29
 Commit: e47e2a0
 
