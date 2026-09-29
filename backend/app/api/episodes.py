@@ -1,10 +1,13 @@
 """集數公開路由 + 播放 / 進度回報（需登入）。"""
-from fastapi import APIRouter, Depends, HTTPException, status
+import httpx
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.deps import get_current_user, get_db
+from app.core.security import TokenError, decode_token
 from app.models.drama import Drama
 from app.models.episode import Episode
 from app.models.user import User
@@ -32,9 +35,38 @@ def get_episode(episode_id: int, db: Session = Depends(get_db)):
     return ep
 
 
+def _resolve_upstream_url(
+    ep: Episode, drama: Drama | None, db: Session
+) -> str | None:
+    """決定呢集實際要串流嘅上游片 URL。返 None = 冇片（敬請期待）。"""
+    # 1) 純占位片（placeholder-soon.mp4，8KB 黑畫面）：冇真片。
+    if ep.video_url and "placeholder-soon" in ep.video_url:
+        return None
+
+    source = drama.source if drama else None
+
+    # 2) 紅果來源 + 有 player_path：開播時即時重抽新簽名 URL。
+    if source == "hongguo" and ep.player_path:
+        fresh = hongguo_playback.fetch_fresh_url(ep.player_path)
+        if fresh and hongguo_playback.head_video_ok(fresh):
+            if fresh != ep.video_url:
+                ep.video_url = fresh
+                db.commit()
+                db.refresh(ep)
+            return fresh
+        # 重抽失敗：探現有 DB 嘅 video_url 仲生唔生。
+        if hongguo_playback.head_video_ok(ep.video_url):
+            return ep.video_url
+        return None  # 舊 CDN 都過期：敬請期待
+
+    # 3) 其他來源 / 本機 static：直接用 DB URL。
+    return ep.video_url
+
+
 @router.get("/{episode_id}/stream", response_model=StreamOut)
 def stream_episode(
     episode_id: int,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -42,42 +74,93 @@ def stream_episode(
     if ep is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="集數不存在")
 
-    # 1) 純占位片（placeholder-soon.mp4，8KB 黑畫面）：優雅返「冇片」狀態，
-    #    等前端顯示「敬請期待」海報，唔好黑畫面。
-    if ep.video_url and "placeholder-soon" in ep.video_url:
-        return StreamOut(
-            episode=ep, video_url="", available=False, message="此集敬請期待"
-        )
-
     drama = db.get(Drama, ep.drama_id)
-    source = drama.source if drama else None
+    upstream = _resolve_upstream_url(ep, drama, db)
+    if upstream is None:
+        return StreamOut(episode=ep, video_url="", available=False, message="此集敬請期待")
 
-    # 紅果來源 + 有 player_path：開播時即時重抓新簽名 URL，唔長存過期 CDN URL。
-    if source == "hongguo" and ep.player_path:
-        fresh = hongguo_playback.fetch_fresh_url(ep.player_path)
-        if fresh and hongguo_playback.head_video_ok(fresh):
-            # 新 URL 合格：順手寫回 DB 做 cache，再返畀前端。
-            if fresh != ep.video_url:
-                ep.video_url = fresh
-                db.commit()
-                db.refresh(ep)
-            return StreamOut(episode=ep, video_url=fresh, available=True)
+    # 紅果 CDN 有 Referer 防盗鏈（外站 Referer 返 403），所以片經我哋後端代理：
+    # 前端只係 request 我哋呢個 domain，唔會帶出 github.io 嘅 Referer。
+    auth = request.headers.get("authorization", "")
+    token = auth.removeprefix("Bearer ").strip()
+    base = str(request.base_url).rstrip("/")
+    media_url = f"{base}/episodes/{ep.id}/media"
+    if token:
+        media_url += f"?token={token}"
+    return StreamOut(episode=ep, video_url=media_url, available=True)
 
-        # 重抓失敗 / 新 URL 唔合格：探現有 DB 嘅 video_url 仲生唔生。
-        if hongguo_playback.head_video_ok(ep.video_url):
-            return StreamOut(episode=ep, video_url=ep.video_url, available=True)
 
-        # 舊 CDN URL 都過期（403 等）：拎唔到新片，優雅顯示「敬請期待」，
-        # 唔好再返黑畫面占位片。
-        return StreamOut(
-            episode=ep,
-            video_url="",
-            available=False,
-            message="此集敬請期待",
-        )
+def _authorize_media(token: str | None, db: Session) -> User:
+    """媒體代理用 query token 驗證（<video> tag 帶唔到 Authorization header）。"""
+    if not token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="未認證")
+    try:
+        payload = decode_token(token, expected_type="access")
+    except TokenError as exc:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(exc))
+    user = db.get(User, int(payload["sub"]))
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="使用者不存在")
+    return user
 
-    # 其他來源（或紅果但冇 player_path）：照舊返 DB 嘅 video_url。
-    return StreamOut(episode=ep, video_url=ep.video_url, available=True)
+
+@router.api_route("/{episode_id}/media", methods=["GET", "HEAD"])
+def media_proxy(
+    episode_id: int,
+    request: Request,
+    token: str | None = Query(default=None),
+    db: Session = Depends(get_db),
+):
+    _user = _authorize_media(token, db)
+    ep = db.get(Episode, episode_id)
+    if ep is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="集數不存在")
+    drama = db.get(Drama, ep.drama_id)
+    upstream = _resolve_upstream_url(ep, drama, db)
+    if upstream is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="此集敬請期待")
+
+    # 轉發 Range request，串流畀前端。
+    headers = {}
+    rng = request.headers.get("range")
+    if rng:
+        headers["Range"] = rng
+    client = httpx.Client(
+        timeout=30.0, follow_redirects=True, headers={"User-Agent": hongguo_playback.UA}
+    )
+    up_ctx = client.stream("GET", upstream, headers=headers)
+    up = up_ctx.__enter__()
+    try:
+        up.raise_for_status()
+    except Exception as exc:  # noqa: BLE001
+        up_ctx.__exit__(None, None, None)
+        client.close()
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY, detail="片源暫時唔得"
+        ) from exc
+
+    resp_headers = {
+        "Content-Type": up.headers.get("content-type", "video/mp4"),
+        "Accept-Ranges": "bytes",
+        "Cache-Control": "no-store",
+    }
+    clen = up.headers.get("content-length")
+    if clen:
+        resp_headers["Content-Length"] = clen
+    crange = up.headers.get("content-range")
+    if crange:
+        resp_headers["Content-Range"] = crange
+    up_status = up.status_code
+
+    def gen():
+        try:
+            for chunk in up.iter_bytes(chunk_size=64 * 1024):
+                yield chunk
+        finally:
+            up_ctx.__exit__(None, None, None)
+            client.close()
+
+    return StreamingResponse(gen(), status_code=up_status, headers=resp_headers)
 
 
 @router.post("/{episode_id}/progress", response_model=ProgressOut)
