@@ -25,5 +25,7 @@ class EpisodeUpdate(BaseModel):
 class EpisodeOut(EpisodeBase):
     id: int
     drama_id: int
+    # None = 舊直片 mp4（走 media proxy）；'youtube' = YouTube 官方 iframe
+    video_type: str | None = None
 
     model_config = {"from_attributes": True}

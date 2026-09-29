@@ -28,6 +28,9 @@ class StreamOut(BaseModel):
     available: bool = True
     # True = 呢集要睇 20 秒廣告先可以播（video_url 會係空字串）
     requires_ad: bool = False
+    # None = 舊直片 mp4（前端用 <video> + media proxy）；'youtube' = YouTube 官方片，
+    # 前端要直接 iframe embed（video_url 係 watch?v=... 連結）。
+    video_type: str | None = None
     message: str | None = None
 
 
@@ -116,6 +119,16 @@ def stream_episode(
             available=True,
             requires_ad=True,
             message="免費用戶可免費觀看頭10集，之後需觀看廣告解鎖",
+        )
+
+    # YouTube 官方片：一定要 iframe 直連（唔經 media proxy，YouTube 唔俾代理 mp4）。
+    # 上一步 _has_stream_access 已過閘（收費劇照樣要廣告/VIP 解鎖）。
+    if ep.video_type == "youtube":
+        return StreamOut(
+            episode=ep,
+            video_url=ep.video_url,
+            video_type="youtube",
+            available=True,
         )
 
     # 紅果 CDN 有 Referer 防盗鏈（外站 Referer 返 403），所以片經我哋後端代理：

@@ -39,6 +39,8 @@ export interface Episode {
   /** 時長（秒） */
   duration?: number | null;
   description?: string | null;
+  /** 片種：缺省/null = 直片 mp4（<video>）；'youtube' = YouTube 官方 iframe */
+  video_type?: string | null;
 }
 
 /** 廣告影片（CMS 上傳） */

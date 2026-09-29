@@ -15,6 +15,19 @@ interface StreamResponse {
   message?: string | null;
   /** true = 免費用戶要睇 20 秒廣告先解鎖；此時 available=true 但 video_url 為空 */
   requires_ad?: boolean;
+  /** 片種：缺省/null = 直片 mp4（<video>）；'youtube' = YouTube 官方 iframe */
+  video_type?: string | null;
+}
+
+/** 由 watch?v=... ／embed URL／裸 id 抽出 YouTube embed src。 */
+function youtubeEmbedSrc(url: string): string {
+  let m = url.match(/[?&]v=([A-Za-z0-9_-]{11})/);
+  if (m) return `https://www.youtube.com/embed/${m[1]}?autoplay=1&rel=0&playsinline=1`;
+  m = url.match(/\/embed\/([A-Za-z0-9_-]{11})/);
+  if (m) return `https://www.youtube.com/embed/${m[1]}?autoplay=1&rel=0&playsinline=1`;
+  m = url.match(/^([A-Za-z0-9_-]{11})$/);
+  if (m) return `https://www.youtube.com/embed/${m[1]}?autoplay=1&rel=0&playsinline=1`;
+  return url;
 }
 
 interface EpisodeDetail extends Episode {
@@ -49,6 +62,8 @@ function PlayInner() {
   const [isFs, setIsFs] = useState(false);
   const [episode, setEpisode] = useState<EpisodeDetail | null>(null);
   const [videoUrl, setVideoUrl] = useState<string>('');
+  // 'youtube' 時用 <iframe> 取代 <video>；其餘/null 用舊 mp4 播放
+  const [videoType, setVideoType] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   // 呢集冇真片（後端 available=false）→ 顯示「敬請期待」海報
@@ -71,6 +86,7 @@ function PlayInner() {
     setComingSoon(false);
     setVideoError(false);
     setAdError(null);
+    setVideoType(null);
 
     Promise.all([
       apiClient<EpisodeDetail>(`/episodes/${episodeId}`),
@@ -99,18 +115,21 @@ function PlayInner() {
         if (stream.available === false) {
           setComingSoon(true);
           setVideoUrl('');
+          setVideoType(null);
           setAdMode(false);
           return;
         }
         // 後端要求睇廣告：進入廣告模式，唔 setVideoUrl
         if (stream.requires_ad === true) {
           setVideoUrl('');
+          setVideoType(null);
           setAdCountdown(AD_SECONDS);
           setAdMode(true);
           return;
         }
         // 正常：直接播
         setAdMode(false);
+        setVideoType(stream.video_type ?? null);
         setVideoUrl(stream.video_url);
       })
       .catch((e: { message?: string }) => setError(e.message ?? '載入失敗'))
@@ -175,9 +194,10 @@ function PlayInner() {
     };
   }, [adMode, adCountdown, adUnlocking, episodeId, loadEpisode]);
 
-  // 每 10 秒上報觀看進度
+  // 每 10 秒上報觀看進度（YouTube iframe 讀唔到 currentTime，youtube 模式跳過）
   useEffect(() => {
     if (!episodeId || !videoUrl) return;
+    if (videoType === 'youtube') return;
 
     const report = async () => {
       const v = videoRef.current;
@@ -201,7 +221,7 @@ function PlayInner() {
       // 離開時最後上報一次
       report();
     };
-  }, [episodeId, videoUrl]);
+  }, [episodeId, videoUrl, videoType]);
 
   // 切集：用 router.push 改 query，配合上面 reactive useSearchParams，
   // episodeId 即時更新 → loadEpisode() 自動切片（正式取代舊 history.replaceState hack）。
@@ -217,8 +237,8 @@ function PlayInner() {
   // 自訂浮動全螢幕制：撳一下入全螢幕，再撳離開。
   // iOS Safari 冇 requestFullscreen（尤其 iPhone）→ fallback 到 video 原生 webkitEnterFullscreen。
   const toggleFullscreen = () => {
+    const isYoutube = videoType === 'youtube';
     const v = videoRef.current;
-    if (!v) return;
 
     // 已經入咗全螢幕（Fullscreen API）→ 離開
     if (document.fullscreenElement) {
@@ -231,15 +251,19 @@ function PlayInner() {
       return;
     }
 
-    // iOS Safari：要用 video 原生全螢幕，而且要喺 user gesture 直接呼叫（唔好包 async）
-    const anyV = v as HTMLVideoElement & { webkitEnterFullscreen?: () => void };
-    if (anyV.webkitEnterFullscreen && !v.requestFullscreen) {
-      anyV.webkitEnterFullscreen();
-      return;
+    // YouTube iframe 模式：冇 <video> 可原生全螢幕，直接 fullscreen 成個 phone container
+    // （iframe 自身亦有 YouTube 提供嘅全螢幕掣）。
+    if (!isYoutube && v) {
+      // iOS Safari：要用 video 原生全螢幕，而且要喺 user gesture 直接呼叫（唔好包 async）
+      const anyV = v as HTMLVideoElement & { webkitEnterFullscreen?: () => void };
+      if (anyV.webkitEnterFullscreen && !v.requestFullscreen) {
+        anyV.webkitEnterFullscreen();
+        return;
+      }
     }
 
     // 桌面／現代瀏覽器：fullscreen 成個 phone container，浮動制同 overlay 先留得住
-    const el: HTMLElement = phoneRef.current ?? v;
+    const el: HTMLElement = phoneRef.current ?? v ?? document.body;
     try {
       const req = (el.requestFullscreen as () => Promise<void> | undefined).call(el);
       req?.catch?.(() => {});
@@ -350,18 +374,28 @@ function PlayInner() {
   return (
     <div className={styles.stage}>
       <div className={styles.phone} ref={phoneRef}>
-        <video
-          ref={videoRef}
-          src={videoUrl}
-          controls
-          autoPlay
-          playsInline
-          className={styles.video}
-          onError={() => setVideoError(true)}
-        />
+        {videoType === 'youtube' ? (
+          <iframe
+            src={youtubeEmbedSrc(videoUrl)}
+            title="YouTube video player"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowFullScreen
+            className={styles.video}
+          />
+        ) : (
+          <video
+            ref={videoRef}
+            src={videoUrl}
+            controls
+            autoPlay
+            playsInline
+            className={styles.video}
+            onError={() => setVideoError(true)}
+          />
+        )}
 
-        {/* 影片出錯（CDN 唔穩定等）：遮蓋住黑畫面，俾人重試 */}
-        {videoError && (
+        {/* 影片出錯（CDN 唔穩定等）：遮蓋住黑畫面，俾人重試（只適用 mp4） */}
+        {videoError && videoType !== 'youtube' && (
           <div className={styles.centerBox}>
             <p className={styles.errorPill}>此集暫時無法播放，敬請期待</p>
             <button

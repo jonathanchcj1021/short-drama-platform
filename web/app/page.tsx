@@ -16,6 +16,7 @@ const SOURCE_TABS: { label: string; value: string | undefined }[] = [
   { label: '全部來源', value: undefined },
   { label: '紅果短劇', value: 'hongguo' },
   { label: '優酷短劇', value: 'youku' },
+  { label: 'YouTube', value: 'youtube' },
 ];
 
 /** 頁碼 window：最多 MAX_PAGE_BUTTONS 個，頭尾保留＋省略號 */

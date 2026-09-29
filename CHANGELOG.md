@@ -2,6 +2,41 @@
 
 本檔記錄每次 release。格式：版本、日期、更新內容、Git commit short SHA。
 
+## [v1.3.0] - 2026-09-29
+Commit: _（push 後補）_
+
+### 新增 — YouTube 官方免費片源接入（video_type + PlayClient iframe）
+- **`episodes` 加 `video_type` column**（migration `d2e3f4a5b6c7`，`String(20)` nullable，預設 NULL）。NULL = 舊行為直片 mp4（走後端 media proxy）；`'youtube'` = YouTube 官方片。
+- **後端 `/episodes/{id}/stream` 支援 youtube**：通過 `_has_stream_access` 廣告／VIP 閘之後，若 `ep.video_type == 'youtube'`，直接回 `StreamOut(video_url=<watch?v=...>, video_type='youtube', available=True)`，**唔經 media proxy**（YouTube 一定要 iframe 直連）。`StreamOut` 同 `EpisodeOut` schema 都加 `video_type` 欄位。
+- **前端 `PlayClient.tsx`**：`video_type === 'youtube'` 時 render `<iframe src="https://www.youtube.com/embed/{videoId}?autoplay=1&rel=0&playsinline=1" allowFullScreen>` 取代 `<video>`；videoId 由 `watch?v=`（或 embed URL／裸 id）抽出。fullscreen 掣、上／下集掣、top/bottom bar 全部照舊（fullscreen 成個 phone container，iframe 照樣 fullscreen）。**YouTube 模式跳過進度上報 interval**（iframe 讀唔到 currentTime，唔接 YT API）。廣告閘照舊（第 11 集起 requires_ad，解鎖後先回 youtube URL）。
+- **來源標示**：`web/lib/sources.ts` 加 `youtube: 'YouTube 官方'`；首頁來源 filter tabs 加「YouTube」。Web version 1.2.1 → 1.3.0（footer 顯示）。
+
+### 新增 — 5 部優酷劇接入 YouTube 官方全集示範
+寫咗可重跑 seed script `backend/scripts/seed_youtube_episodes.py`（idempotent：已存在嘅集數跳過），為以下 5 部原本淨係 metadata（source='youku'、0 集）嘅劇建集數並把 source 改為 `youtube`：
+
+| drama_id | 劇名 | 集數 | 官方頻道 |
+|---|---|---|---|
+| 67 | 锁爱三生 (Circle of Love) | 24/24 | YOUKU English |
+| 60 | 我们在黑夜中相拥 (Embrace in the Dark Night) | 24/24 | YOUKU English |
+| 63 | 爱在天摇地动时 (Undercover Affair) | 24/24 | YOUKU English |
+| 64 | 永夜长明 (Dawn is Breaking) | 30/30 | YOUKU English |
+| 66 | 千金丫环 (Maid's Revenge) | 30/30 | YOUKU Mini Drama |
+
+合共 **132 集** YouTube episode rows（全部 `video_type='youtube'`）。其餘 35 部劇 DB 記錄一個都冇郁。
+
+### 調查 — 40 部優酷劇全量片源審計總結
+- **35 部有正版免費片源**：其中 **33 部喺優酷官方 YouTube 頻道**（YOUKU English / YOUKU Mini Drama / YOUKU COSTUME / YOUKU ROMANCE 等認證號，廣告變現、非 DRM），**2 例外**：75 凤骨琉璃（愛奇藝官方免費 62 集，但 web 係 SPA 爬唔到）。
+- **5 部真係冇合法免費片源**：69 万万没想到第一季、72 东北往事之大时代、77 锦绣倾城王妃不好惹、90 王老敢与游击队、95 龙门诀之大漠风云变。
+- **潛在未接**：68 反诈·猎蜂者、78 魔方游戏之罪杀 YouTube 後段集數設為 Members only（付費會員牆，只得頭幾集免費）；75 凤骨琉璃愛奇藝免費但 SPA 爬唔到。
+- 完整總表見 `SOURCE_AUDIT_REPORT.md`。
+
+### 已知 — 地區封鎖（如實記錄）
+- YouTube 官方影片描述註明「部分地區（港／澳／台／東南亞）正片請移步優酷國際版 APP」。實測本機（香港）：playlist 頁被 YouTube 標示「系統已隐藏 N 个无法播放的视频」，多數集數 iframe 會顯示地區封鎖；僅個別集（如 EP01/EP02）可喺香港免費播放。詳見實測截圖與 `SOURCE_AUDIT_REPORT.md`。
+
+### 其他
+- 後端測試維持 14 passed。
+- Web build 成功，GitHub Actions 自動 deploy 去 Pages。
+
 ## [未發佈] - 2026-09-29
 Commit: _（隨下次 release 補）_
 

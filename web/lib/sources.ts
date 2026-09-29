@@ -2,6 +2,7 @@
 const SOURCE_LABELS: Record<string, string> = {
   hongguo: '紅果短劇',
   youku: '優酷短劇',
+  youtube: 'YouTube 官方',
   fanqie: '番茄短劇',
   douyin: '抖音短劇',
 };
