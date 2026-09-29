@@ -2,6 +2,16 @@
 
 本檔記錄每次 release。格式：版本、日期、更新內容、Git commit short SHA。
 
+## [v1.1.1] - 2026-09-29
+Commit: 4b08dad
+
+### 修復 — 播放頁兩個 player bug
+- **播放途中撳「下一集」冇反應**：`PlayInner` 原本用 mount-only `useEffect([])` 讀 `window.location.search` 存入 `episodeId` state；App Router 下同 route 改 query（`router.push('/play/?episode=新id')`）唔會重掛 component，mount effect 唔會再跑，所以 URL 變咗但片繼續播上一集。改用 reactive `useSearchParams()` 讀 query，`episodeId` 隨 URL 即時更新，再觸發 `useEffect([loadEpisode])` 重切片。同時將 `PlayInner` 包喺 `<Suspense>` 入面，過靜態匯出（`output: export`）嘅 build trap。
+- **下／上一集制原本成日 disabled**：後端 `/episodes/{id}` 唔回傳 `prev/next_episode_id`，所以制長灰、撳唔到。前端而家拉埋 `/dramas/{id}`（含成套劇集數列表），按 `episode_number` 排序後搵當前集位置，自己計上／下一集 id——唔使改 backend。
+- **冇全螢幕制**：手機 webview 原生控制列唔一定有全螢幕掣，加咗一個右上角自訂浮動全螢幕制（z-index 高過 video 同 native controls，播放途中都撳到）。桌面走 Fullscreen API fullscreen 成個 phone container；iOS Safari fallback 到 `video.webkitEnterFullscreen()`（user gesture 直接呼叫）；並嘗試 `screen.orientation.lock('landscape')`（失敗靜默忽略）。撳一下入、再撳離開。
+- Web footer 版本號：`v1.1.1`。
+
+
 ## [v1.2.0] - 2026-09-29
 Commit: _（待 deploy 後補）_
 
