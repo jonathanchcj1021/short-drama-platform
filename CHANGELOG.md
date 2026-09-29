@@ -2,13 +2,32 @@
 
 本檔記錄每次 release。格式：版本、日期、更新內容、Git commit short SHA。
 
+## [v1.2.0] - 2026-09-29
+Commit: _（待 deploy 後補）_
+
+### 新增 — 多來源短劇爬蟲（唔再淨係紅果）
+- **優酷短劇（youku）**：新增公開搜尋結果頁爬蟲 `backend/scripts/crawler/youku.py`，由 `so.youku.com` 短劇關鍵字 SSR 頁（`window.__INITIAL_DATA__` JSON）抽劇名／封面／集數／獨播 VIP 角標／年份／簡介。**只匯入 metadata**：優酷正片全 DRM/VIP，攞唔到公開片 URL，集數留空，唔造假。實際匯入 **40 部優酷短劇**。
+- **爬蟲 CLI 支援多來源**：`crawl.py` 改做 source registry（`CRAWLERS` dict），`--source` 接受 `hongguo / youku / fanqie / douyin / all`；`all` 順序跑晒已註冊來源，單一來源失敗唔會成條鏈斷。`source` 欄位如實標記每部劇來源；`hongguo_series_id` 只紅果先填（其他來源留空）。
+- **誠實 placeholder adapter**：`fanqie.py`（番茄短劇）、`douyin.py`（抖音短劇）。實探確認暫時冇公開網頁片單，adapter 會真係抓一次首頁確認現況後回傳空 list，將來官方一開放網頁頻道就落 parser。
+- 前端來源 badge 映射 `web/lib/sources.ts` 加 youku／fanqie／douyin 顯示名。
+
+### 已知 — 市面主要短劇 app 公開網頁實探結論（唔造假）
+- **可抓**：紅果（已有，32 部／363 集公開可播）、優酷（新，40 部 metadata-only）。
+- **app-only / 反爬牆，冇接 adapter**：番茄短劇（fanqienovel.com 係小說站，短劇只係 App 入面 tab；官方網頁短劇入口其實就係紅果）、抖音短劇（douyin.com 係 SPA＋`a_bogus` 簽名牆，分享頁有 secsdk captcha）、快手星芒（robots 全站禁＋連線 timeout，消費片單只喺 App／小程序）、騰訊微視／騰訊視頻短劇（頻道跳錯誤頁、cover 頁靠簽名 API＋DRM fMP4）、愛奇藝／芒果 TV（server-side 全係 SPA/Nuxt 空殼）、九州／麥芽／點眾（企業營銷落地頁，冇公開片單）。完整探測記錄見 `backend/scripts/crawler/NEW_SOURCES_PROBE.md`。
+
+
 ## [v1.1.0] - 2026-09-29
 Commit: _（待 deploy 後補）_
 
-### 新增
-- **CMS 後台新增廣告影片上傳／管理**：管理員可喺 admin 頁「廣告管理」tab 直接上傳 mp4 廣告片（multipart 上傳，存落 `/static/ads/<uuid8>.mp4`）、睇預覽、即時切換啟用／停用、同埋刪除（連影片檔一併清走）。只收 `.mp4` / `video/mp4`，其他格式 400 拒收。
-- 後端新 model `Ad`（id / title / video_url / duration 預設 20 秒 / active 預設啟用 / created_at），migration `c7d8e9f0a1b2` 建 `ads` 表；新 CMS 端點 `POST /cms/ads/upload`、`GET /cms/ads`、`PUT /cms/ads/{id}`、`DELETE /cms/ads/{id}`（全部沿用 `require_admin`）。
-- 後端依賴加 `python-multipart`（FastAPI 檔案上傳所需）。
+### 新增 — 免費 / VIP 會員制（Freemium）
+- **會員等級**：`users` 加 `membership_tier`（`free` / `vip_monthly` / `vip_yearly`，預設 `free`）同 `vip_expires_at`；migration `b1c2d3e4f5a6`。有效 VIP = tier 非 free 且 `vip_expires_at` 未過期。
+- **免費用戶限制**：每套收費劇頭 10 集免費任睇；第 11 集起播放前要睇 20 秒廣告倒數先解鎖（前端假廣告 creative 輪播，唔接廣告聯盟）。每集只需睇一次——`episode_unlocks` 表記錄已解鎖集數，重入直接播。
+- **VIP 訂閱（模擬付款）**：`POST /billing/subscribe?plan=monthly|yearly` 即時 set 到期日（月 30 日 / 年 365 日，續訂由現有到期日延長）；`GET /billing/me` 查狀態連價錢。月費 HK$28、年費 HK$288。
+- **播放閘（後端強制）**：`GET /episodes/{id}/stream` 對免費用戶第 11 集起回 `requires_ad=true`（無 video_url）；媒體代理 `/episodes/{id}/media` 未解鎖直連 403，防止繞過。VIP 同收費劇以外直接放行。
+- **新「升級 VIP」頁** `/upgrade`：月費／年費 plan card、模擬訂閱、訂閱後即時顯示到期日。
+- **Navbar**：免費用戶「免費會員」badge + 金色「升級 VIP」；VIP 顯示「VIP · 到期 YYYY-MM-DD」金底 badge。
+- **劇集詳情**：收費劇第 11 集起顯示 🔒；`dramas.is_paid`（預設 true）容許 CMS 設定邊套劇免費開放。
+- **廣告影片 CMS**：admin 頁「廣告管理」tab 可上傳 mp4、切啟用、刪除；`ads` 表（migration `c7d8e9f0a1b2`）＋ `python-multipart`。
 
 ## [v1.0.1] - 2026-09-29
 Commit: _（待 deploy 後補）_
