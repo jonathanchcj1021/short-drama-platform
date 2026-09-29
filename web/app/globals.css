@@ -217,6 +217,14 @@ button {
   padding: var(--spacing-6) var(--container-pad-x) var(--spacing-16);
 }
 
+/* 全站 footer：版本號 */
+.appFooter {
+  text-align: center;
+  padding: var(--spacing-6) var(--container-pad-x) var(--spacing-10);
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-xs);
+}
+
 /* ===== 共用：loading spinner ===== */
 @keyframes spin {
   to {

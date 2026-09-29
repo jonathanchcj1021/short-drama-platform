@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const isProd = process.env.NODE_ENV === 'production';
+const pkg = require('./package.json');
 
 const nextConfig = {
   // 靜態匯出：輸出 out/ 目錄，部署到 GitHub Pages
@@ -17,6 +18,10 @@ const nextConfig = {
   },
   // 靜態匯出不支援伺服器動態參數，統一由用戶端讀取
   trailingSlash: true,
+  // 將 package.json version 注入用戶端，畀 footer 顯示版本號
+  env: {
+    NEXT_PUBLIC_APP_VERSION: pkg.version,
+  },
 };
 
 module.exports = nextConfig;

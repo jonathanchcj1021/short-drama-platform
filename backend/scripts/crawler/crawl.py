@@ -107,6 +107,8 @@ def _upsert_episodes(db, drama: Drama, item: ShortDramaItem, stats: dict) -> Non
             row.video_url = video_url
             if ep.duration:
                 row.duration = ep.duration
+            if ep.player_path:
+                row.player_path = ep.player_path
             stats["episodes_updated"] += 1
         else:
             db.add(
@@ -116,6 +118,7 @@ def _upsert_episodes(db, drama: Drama, item: ShortDramaItem, stats: dict) -> Non
                     title=title,
                     video_url=video_url,
                     duration=ep.duration,
+                    player_path=ep.player_path,
                 )
             )
             stats["episodes_created"] += 1

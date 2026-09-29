@@ -27,6 +27,9 @@ export default function RootLayout({
         <AuthBootstrap />
         <Navbar />
         {children}
+        <footer className="appFooter">
+          短劇平台 · v{process.env.NEXT_PUBLIC_APP_VERSION ?? '1.0.0'}
+        </footer>
       </body>
     </html>
   );

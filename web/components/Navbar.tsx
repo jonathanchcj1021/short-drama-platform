@@ -21,6 +21,17 @@ export default function Navbar() {
     setLoggedIn(isLoggedIn());
   }, [pathname]);
 
+  // App 啟動 bootstrapSession 完成後會 broadcast auth-changed（例如 refresh token 續返成功），
+  // 此時都要重新讀 localStorage，令 Navbar 由「未登入」更新做「已登入」。
+  useEffect(() => {
+    const sync = () => {
+      setUser(getUser());
+      setLoggedIn(isLoggedIn());
+    };
+    window.addEventListener('auth-changed', sync);
+    return () => window.removeEventListener('auth-changed', sync);
+  }, []);
+
   const handleLogout = () => {
     clearAuth();
     setUser(null);

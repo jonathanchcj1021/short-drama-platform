@@ -120,7 +120,7 @@ export default function DramaDetailClient() {
             {drama.episode_count != null && <span className={styles.tag}>{drama.episode_count} 集</span>}
             {drama.release_year != null && <span className={styles.tag}>{drama.release_year}</span>}
             {drama.is_completed && <span className={styles.tagGold}>已完結</span>}
-            {from && <span className={styles.tagGold}>📱 來自{from}</span>}
+            {from && <span className={styles.tagGold}>來自：{from}</span>}
           </div>
           <p className={styles.desc}>{drama.description}</p>
           {progress && lastEpisodeNum != null && (

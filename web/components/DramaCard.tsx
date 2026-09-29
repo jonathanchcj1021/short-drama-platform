@@ -42,7 +42,7 @@ export default function DramaCard({ drama }: Props) {
 
       {/* 底部劇名 */}
       <div className={styles.info}>
-        {from && <span className={styles.sourcePill}>📱 {from}</span>}
+        {from && <span className={styles.sourcePill}>來自：{from}</span>}
         <h3 className={styles.title}>{drama.title}</h3>
       </div>
     </Link>

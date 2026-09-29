@@ -23,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -33,6 +34,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -50,6 +52,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import com.drama.app.BuildConfig
 import com.drama.app.data.model.Category
 import com.drama.app.data.model.Drama
 import com.drama.app.data.model.categoryLabel
@@ -79,6 +82,7 @@ fun HomeScreen(
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
     var menuExpanded by remember { mutableStateOf(false) }
+    var showAbout by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
     // 載入分類
@@ -130,6 +134,13 @@ fun HomeScreen(
                     }
                     DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
                         DropdownMenuItem(
+                            text = { Text("關於", color = TextSecondary) },
+                            onClick = {
+                                menuExpanded = false
+                                showAbout = true
+                            },
+                        )
+                        DropdownMenuItem(
                             text = { Text("登出", color = TextSecondary) },
                             onClick = {
                                 menuExpanded = false
@@ -173,6 +184,17 @@ fun HomeScreen(
                 }
             }
         }
+    }
+
+    if (showAbout) {
+        AlertDialog(
+            onDismissRequest = { showAbout = false },
+            title = { Text("關於") },
+            text = { Text("版本 v${BuildConfig.VERSION_NAME}") },
+            confirmButton = {
+                TextButton(onClick = { showAbout = false }) { Text("關閉") }
+            },
+        )
     }
 }
 

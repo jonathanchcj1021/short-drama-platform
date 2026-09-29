@@ -219,3 +219,24 @@
 .retryBtn:hover {
   background: rgba(255, 255, 255, 0.1);
 }
+
+/* 「敬請期待」占位海報 */
+.comingSoonEmoji {
+  margin: 0;
+  font-size: 56px;
+  line-height: 1;
+}
+
+.comingSoonTitle {
+  margin: 0;
+  color: #fff;
+  font-size: 22px;
+  font-weight: var(--weight-semibold);
+  letter-spacing: 2px;
+}
+
+.comingSoonSub {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: var(--font-size-md);
+}

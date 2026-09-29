@@ -11,7 +11,7 @@ from app.models.user import User
 from app.models.watch_progress import WatchProgress
 from app.schemas.episode import EpisodeOut
 from app.schemas.progress import ProgressOut, ProgressReport
-from app.services import hongguo_refresh
+from app.services import hongguo_playback
 
 router = APIRouter(prefix="/episodes", tags=["episodes"])
 
@@ -42,48 +42,42 @@ def stream_episode(
     if ep is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="集數不存在")
 
-    placeholder = "此集敬請期待"
-
-    # 1) 占位片（placeholder-soon.mp4）：優雅返「冇片」狀態，等前端顯示海報。
-    if hongguo_refresh.is_placeholder_url(ep.video_url):
+    # 1) 純占位片（placeholder-soon.mp4，8KB 黑畫面）：優雅返「冇片」狀態，
+    #    等前端顯示「敬請期待」海報，唔好黑畫面。
+    if ep.video_url and "placeholder-soon" in ep.video_url:
         return StreamOut(
-            episode=ep, video_url="", available=False, message=placeholder
+            episode=ep, video_url="", available=False, message="此集敬請期待"
         )
 
-    # 2) 本機 static mp4 / 其他非紅果 URL：原價返。
-    if not hongguo_refresh.is_hongguo_signed_url(ep.video_url):
-        return StreamOut(episode=ep, video_url=ep.video_url, available=True)
-
-    # 3) 紅果 signed URL：探活；死咗就即時重簽。
     drama = db.get(Drama, ep.drama_id)
-    series_id = drama.hongguo_series_id if drama else None
-    new_url, used_path = hongguo_refresh.resolve_hongguo_url(
-        episode_id=ep.id,
-        drama_series_id=series_id,
-        episode_number=ep.episode_number,
-        stored_player_path=ep.player_path,
-        old_url=ep.video_url,
-    )
+    source = drama.source if drama else None
 
-    if not new_url:
-        # 拎唔到新片（冇 mapping / 紅果抽唔到）：優雅顯示「敬請期待」。
+    # 紅果來源 + 有 player_path：開播時即時重抓新簽名 URL，唔長存過期 CDN URL。
+    if source == "hongguo" and ep.player_path:
+        fresh = hongguo_playback.fetch_fresh_url(ep.player_path)
+        if fresh and hongguo_playback.head_video_ok(fresh):
+            # 新 URL 合格：順手寫回 DB 做 cache，再返畀前端。
+            if fresh != ep.video_url:
+                ep.video_url = fresh
+                db.commit()
+                db.refresh(ep)
+            return StreamOut(episode=ep, video_url=fresh, available=True)
+
+        # 重抓失敗 / 新 URL 唔合格：探現有 DB 嘅 video_url 仲生唔生。
+        if hongguo_playback.head_video_ok(ep.video_url):
+            return StreamOut(episode=ep, video_url=ep.video_url, available=True)
+
+        # 舊 CDN URL 都過期（403 等）：拎唔到新片，優雅顯示「敬請期待」，
+        # 唔好再返黑畫面占位片。
         return StreamOut(
-            episode=ep, video_url="", available=False, message=placeholder
+            episode=ep,
+            video_url="",
+            available=False,
+            message="此集敬請期待",
         )
 
-    # 順手將新 URL + player_path 寫回 DB。
-    changed = False
-    if new_url != ep.video_url:
-        ep.video_url = new_url
-        changed = True
-    if used_path and used_path != ep.player_path:
-        ep.player_path = used_path
-        changed = True
-    if changed:
-        db.commit()
-        db.refresh(ep)
-
-    return StreamOut(episode=ep, video_url=new_url, available=True)
+    # 其他來源（或紅果但冇 player_path）：照舊返 DB 嘅 video_url。
+    return StreamOut(episode=ep, video_url=ep.video_url, available=True)
 
 
 @router.post("/{episode_id}/progress", response_model=ProgressOut)

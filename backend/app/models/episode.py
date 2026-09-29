@@ -19,6 +19,6 @@ class Episode(Base):
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     # 紅果 player 頁路徑（/player/<series_id> 或 /player/<series_id>/<item_id>），
     # 用嚟 on-demand 重新簽 signed video URL；只有公開解鎖嘅集先有。
-    player_path: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    player_path: Mapped[str | None] = mapped_column(String(512), nullable=True)
 
     drama: Mapped["Drama"] = relationship(back_populates="episodes")  # noqa: F821

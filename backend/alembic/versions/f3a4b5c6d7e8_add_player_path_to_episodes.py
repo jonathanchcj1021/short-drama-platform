@@ -19,7 +19,7 @@ depends_on: str | Sequence[str] | None = None
 def upgrade() -> None:
     op.add_column(
         'episodes',
-        sa.Column('player_path', sa.String(length=255), nullable=True),
+        sa.Column('player_path', sa.String(length=512), nullable=True),
     )
 
 

@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, type ReactNode } from 'react';
 import { isLoggedIn } from '@/lib/auth';
+import { waitForBootstrap } from '@/lib/apiClient';
 import styles from './ProtectedRoute.module.css';
 
 interface Props {
@@ -16,12 +17,21 @@ export default function ProtectedRoute({ children }: Props) {
   const [authed, setAuthed] = useState(false);
 
   useEffect(() => {
-    const ok = isLoggedIn();
-    setAuthed(ok);
-    setChecked(true);
-    if (!ok) {
-      router.replace('/login');
-    }
+    let cancelled = false;
+    // 等 app 啟動 bootstrap（可能用 refresh token 換新 access token）完成先落決定，
+    // 避免 async 未完、localStorage 仲未恢復時誤跳 /login。
+    waitForBootstrap().then(() => {
+      if (cancelled) return;
+      const ok = isLoggedIn();
+      setAuthed(ok);
+      setChecked(true);
+      if (!ok) {
+        router.replace('/login');
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [router]);
 
   if (!checked) {
