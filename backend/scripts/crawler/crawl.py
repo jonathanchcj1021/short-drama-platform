@@ -9,7 +9,7 @@
     --limit N      最多匯入幾多部（預設 20）
     --dry-run      只打印會匯入嘅內容，唔寫入 DB
     --delay S      每個 HTTP 請求之間嘅間隔秒數（預設 0.6，保持禮貌）
-    --source NAME  來源（目前只有 hongguo）
+    --source NAME  來源（hongguo / youku / fanqie / douyin / all）
 """
 from __future__ import annotations
 
@@ -28,8 +28,19 @@ from app.database import SessionLocal  # noqa: E402
 from app.models.category import Category  # noqa: E402
 from app.models.drama import Drama  # noqa: E402
 from app.models.episode import Episode  # noqa: E402
+from scripts.crawler.douyin import DouyinCrawler  # noqa: E402
+from scripts.crawler.fanqie import FanqieCrawler  # noqa: E402
 from scripts.crawler.hongguo import DEFAULT_HEADERS, HongguoCrawler  # noqa: E402
 from scripts.crawler.items import ShortDramaItem  # noqa: E402
+from scripts.crawler.youku import YoukuCrawler  # noqa: E402
+
+# 來源代碼 → crawler class。「誠實」placeholder（fanqie/douyin）亦註冊埋。
+CRAWLERS: dict[str, type] = {
+    "hongguo": HongguoCrawler,
+    "youku": YoukuCrawler,
+    "fanqie": FanqieCrawler,
+    "douyin": DouyinCrawler,
+}
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger("crawler")
@@ -148,14 +159,16 @@ def import_items(db, items: list[ShortDramaItem]) -> dict:
                     stats["categories_created"] += 1
 
         existing = db.query(Drama).filter(Drama.title == title).first()
+        source_code = _sanitize(item.source) or "hongguo"
         fields = dict(
             description=_sanitize(item.description),
             cover_url=_sanitize(item.cover_url),
             category_id=category.id if category else None,
             episode_count=item.episode_count,
             is_completed=item.is_completed,
-            source=_sanitize(item.source) or "hongguo",
-            hongguo_series_id=_sanitize(item.series_id),
+            source=source_code,
+            # hongguo_series_id 只紅果用（on-demand 重簽 signed URL）；其他來源留 None。
+            hongguo_series_id=_sanitize(item.series_id) if source_code == "hongguo" else None,
         )
         if existing:
             for k, v in fields.items():
@@ -175,11 +188,22 @@ def import_items(db, items: list[ShortDramaItem]) -> dict:
 
 
 async def run(source: str, limit: int, delay: float, with_episodes: bool) -> list[ShortDramaItem]:
+    """跑一個或多個來源。``source`` 可以係單一來源，或 ``all``（跑全部已註冊）。"""
+    source_keys = list(CRAWLERS.keys()) if source == "all" else [source]
     async with httpx.AsyncClient(headers=DEFAULT_HEADERS, timeout=30.0, follow_redirects=True) as client:
-        if source == "hongguo":
-            crawler = HongguoCrawler(client, request_delay=delay)
-            return await crawler.crawl(limit=limit, with_episodes=with_episodes)
-        raise ValueError(f"未知來源: {source}")
+        all_items: list[ShortDramaItem] = []
+        per_source = max(limit // max(len(source_keys), 1), 5)
+        for key in source_keys:
+            cls = CRAWLERS[key]
+            crawler = cls(client, request_delay=delay)
+            try:
+                items = await crawler.crawl(limit=per_source, with_episodes=with_episodes)
+            except Exception as exc:  # noqa: BLE001
+                log.warning("來源 %s 抓取失敗：%s", key, exc)
+                continue
+            log.info("來源 %s：爬到 %d 部", key, len(items))
+            all_items.extend(items)
+        return all_items
 
 
 def main() -> None:
@@ -187,7 +211,12 @@ def main() -> None:
     parser.add_argument("--limit", type=int, default=20)
     parser.add_argument("--dry-run", action="store_true", help="只打印，唔寫入 DB")
     parser.add_argument("--delay", type=float, default=0.6)
-    parser.add_argument("--source", default="hongguo", choices=["hongguo"])
+    parser.add_argument(
+        "--source",
+        default="hongguo",
+        choices=["all", *CRAWLERS.keys()],
+        help="來源：hongguo / youku / fanqie / douyin / all",
+    )
     parser.add_argument(
         "--with-episodes",
         action="store_true",
@@ -219,6 +248,15 @@ def main() -> None:
             stats["created"], stats["updated"], new_cats,
             stats["episodes_created"], stats["episodes_updated"],
         )
+        from sqlalchemy import func as _func
+        drama_counts = dict(db.query(Drama.source, _func.count(Drama.id)).group_by(Drama.source).all())
+        ep_counts = dict(
+            db.query(Drama.source, _func.count(Episode.id))
+            .join(Episode, Episode.drama_id == Drama.id)
+            .filter(Episode.video_url.isnot(None))
+            .group_by(Drama.source).all())
+        for src in sorted(drama_counts):
+            log.info("  來源 %-8s：劇 %d 部、有片可播嘅集 %d", src, drama_counts[src], ep_counts.get(src, 0))
     finally:
         db.close()
 
