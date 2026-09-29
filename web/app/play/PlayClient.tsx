@@ -1,7 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { apiClient } from '@/lib/apiClient';
 import type { DramaDetail, Episode } from '@/types';
@@ -33,14 +34,19 @@ const AD_CREATIVES = [
 ];
 
 function PlayInner() {
-  const [episodeId, setEpisodeId] = useState<string>('');
-
-  // 靜態匯出下由查詢參數讀取集數 id（/play/?episode=1）
-  useEffect(() => {
-    setEpisodeId(new URLSearchParams(window.location.search).get('episode') ?? '');
-  }, []);
+  const router = useRouter();
+  // reactive 讀 query：router.push('/play/?episode=新id') 一變就即時更新，
+  // 觸發下面依賴 episodeId 嘅 loadEpisode() 重新切片（修「下一集冇反應」）。
+  // 舊碼用 mount-only effect 讀 window.location.search，query 變更唔會重跑。
+  const searchParams = useSearchParams();
+  const episodeId = searchParams.get('episode') ?? '';
 
   const videoRef = useRef<HTMLVideoElement>(null);
+  // Fullscreen API 目標係成個 phone container：咁浮動全螢幕制同頂／底 overlay
+  // 先會留喺全螢幕畫面，可以再撳離開（iOS 例外，走 video 原生全螢幕）。
+  const phoneRef = useRef<HTMLDivElement>(null);
+  // 係咪已入全螢幕（用嚟轉 icon + aria-label）
+  const [isFs, setIsFs] = useState(false);
   const [episode, setEpisode] = useState<EpisodeDetail | null>(null);
   const [videoUrl, setVideoUrl] = useState<string>('');
   const [loading, setLoading] = useState(true);
@@ -115,6 +121,17 @@ function PlayInner() {
     loadEpisode();
   }, [loadEpisode]);
 
+  // 跟蹤 Fullscreen API 狀態（桌面瀏覽器），用嚟轉全螢幕制 icon
+  useEffect(() => {
+    const onChange = () => setIsFs(Boolean(document.fullscreenElement));
+    document.addEventListener('fullscreenchange', onChange);
+    document.addEventListener('webkitfullscreenchange', onChange as EventListener);
+    return () => {
+      document.removeEventListener('fullscreenchange', onChange);
+      document.removeEventListener('webkitfullscreenchange', onChange as EventListener);
+    };
+  }, []);
+
   // ===== 廣告倒數 =====
   // adMode=true 時每秒減一；到 0 自動 POST unlock，再 reload stream 攞真片。
   useEffect(() => {
@@ -186,20 +203,59 @@ function PlayInner() {
     };
   }, [episodeId, videoUrl]);
 
-  // 切集：直接 setEpisodeId，等依賴 [episodeId] 嘅 loadEpisode() 重新切片；
-  // 唔好用 router.push('/play/?episode=X')，因為 Next.js App Router 唔會重新 mount
-  // 同一個 page component，useEffect([]) 唔會再跑，URL 變咗但片仲係舊集。
+  // 切集：用 router.push 改 query，配合上面 reactive useSearchParams，
+  // episodeId 即時更新 → loadEpisode() 自動切片（正式取代舊 history.replaceState hack）。
   const goPrev = () => {
     const target = episode?.prev_episode_id;
-    if (!target) return;
-    setEpisodeId(String(target));
-    window.history.replaceState(null, '', `${window.location.pathname}?episode=${target}`);
+    if (target) router.push(`/play/?episode=${target}`);
   };
   const goNext = () => {
     const target = episode?.next_episode_id;
-    if (!target) return;
-    setEpisodeId(String(target));
-    window.history.replaceState(null, '', `${window.location.pathname}?episode=${target}`);
+    if (target) router.push(`/play/?episode=${target}`);
+  };
+
+  // 自訂浮動全螢幕制：撳一下入全螢幕，再撳離開。
+  // iOS Safari 冇 requestFullscreen（尤其 iPhone）→ fallback 到 video 原生 webkitEnterFullscreen。
+  const toggleFullscreen = () => {
+    const v = videoRef.current;
+    if (!v) return;
+
+    // 已經入咗全螢幕（Fullscreen API）→ 離開
+    if (document.fullscreenElement) {
+      try {
+        const p = document.exitFullscreen() as unknown as Promise<void> | undefined;
+        p?.catch?.(() => {});
+      } catch {
+        // 靜默忽略
+      }
+      return;
+    }
+
+    // iOS Safari：要用 video 原生全螢幕，而且要喺 user gesture 直接呼叫（唔好包 async）
+    const anyV = v as HTMLVideoElement & { webkitEnterFullscreen?: () => void };
+    if (anyV.webkitEnterFullscreen && !v.requestFullscreen) {
+      anyV.webkitEnterFullscreen();
+      return;
+    }
+
+    // 桌面／現代瀏覽器：fullscreen 成個 phone container，浮動制同 overlay 先留得住
+    const el: HTMLElement = phoneRef.current ?? v;
+    try {
+      const req = (el.requestFullscreen as () => Promise<void> | undefined).call(el);
+      req?.catch?.(() => {});
+    } catch {
+      // 靜默忽略
+    }
+
+    // 手機版嘗試鎖 landscape；iOS 唔支援屬正常，失敗就用戶自行 rotate
+    try {
+      const so = screen.orientation as ScreenOrientation & {
+        lock?: (o: string) => Promise<void>;
+      };
+      so?.lock?.('landscape')?.catch?.(() => {});
+    } catch {
+      // 靜默忽略
+    }
   };
 
   if (loading) {
@@ -293,7 +349,7 @@ function PlayInner() {
 
   return (
     <div className={styles.stage}>
-      <div className={styles.phone}>
+      <div className={styles.phone} ref={phoneRef}>
         <video
           ref={videoRef}
           src={videoUrl}
@@ -330,6 +386,44 @@ function PlayInner() {
             {episode?.drama_title ? episode.drama_title : '播放中'}
           </span>
         </div>
+
+        {/* 自訂浮動全螢幕制：浮喺右上角，z-index 高過 video 同 native controls，
+            播放途中都撳到。桌面 Fullscreen API fullscreen 成個 container；iOS 走 video 原生全螢幕。 */}
+        <button
+          type="button"
+          className={styles.fsBtn}
+          onClick={toggleFullscreen}
+          aria-label={isFs ? '離開全螢幕' : '進入全螢幕'}
+          title={isFs ? '離開全螢幕' : '進入全螢幕'}
+        >
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden
+          >
+            {isFs ? (
+              <>
+                <path d="M8 3v3a2 2 0 0 1-2 2H3" />
+                <path d="M21 8h-3a2 2 0 0 1-2-2V3" />
+                <path d="M3 16h3a2 2 0 0 1 2 2v3" />
+                <path d="M16 21v-3a2 2 0 0 1 2-2h3" />
+              </>
+            ) : (
+              <>
+                <path d="M3 8V5a2 2 0 0 1 2-2h3" />
+                <path d="M16 3h3a2 2 0 0 1 2 2v3" />
+                <path d="M21 16v3a2 2 0 0 1-2 2h-3" />
+                <path d="M8 21H5a2 2 0 0 1-2-2v-3" />
+              </>
+            )}
+          </svg>
+        </button>
 
         {/* 左右浮動切集（桌面） */}
         <button
@@ -382,7 +476,17 @@ function PlayInner() {
 export default function PlayClient() {
   return (
     <ProtectedRoute>
-      <PlayInner />
+      {/* useSearchParams() 喺靜態匯出（output: export）底下一定要包喺 Suspense 入面，
+          否則 next build 會炸（"useSearchParams() should be wrapped in a suspense boundary"） */}
+      <Suspense
+        fallback={
+          <div className={styles.centerBox}>
+            <div className={styles.spinner} />
+          </div>
+        }
+      >
+        <PlayInner />
+      </Suspense>
     </ProtectedRoute>
   );
 }

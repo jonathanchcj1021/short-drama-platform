@@ -1,6 +1,6 @@
 {
   "name": "short-drama-web",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "private": true,
   "description": "短劇平台 Web 前端（Next.js 14 App Router + TypeScript，靜態匯出至 GitHub Pages）",
   "scripts": {
