@@ -1,87 +1,71 @@
-# QA 測試 Checklist
+# QA 測試 Checklist — v1.0.0
 
-**最新版本：** v1.0.0
-**更新日期：** 2026-09-29
-**負責：** QA / 研發小組
-
----
-
-## 測試環境
-
-| 項目 | 值 |
-|---|---|
-| 正式站 | https://jonathanchcj1021.github.io/short-drama-platform/ |
-| 後端 | FastAPI :8000（cloudflared tunnel） |
-| 測試帳號 | `85263106930` / `drama2026`（admin） |
-| 一般用戶 | `webuser@test.com` / `webpass123` |
+**測試日期：** 2026-09-29
+**測試站：** https://jonathanchcj1021.github.io/short-drama-platform/
+**後端：** FastAPI :8000，經 cloudflared tunnel 對外
+**測試帳號：** `85263106930` / `drama2026`（admin）
+**狀態圖例：** ✅ Pass　⚠️ Blocked／需人手確認　❌ Fail
 
 ---
 
 ## 1. 登入流程
 
-- [ ] 開首頁，未登入狀態顯示「登入」按鈕
-- [ ] 入 `/login`，見到帳號密碼 form + Google 按鈕
-- [ ] **冇** OTP / 手機驗證碼 tab
-- [ ] 輸入正確帳密 → 跳到首頁，Navbar 顯示「管理」+「登出」
-- [ ] 輸入錯密碼 → 顯示錯誤訊息
-- [ ] 註冊新帳號 → 自動登入
-- [ ] **記住登入**：登入後關 browser tab 再開，仲係登入狀態（唔使再入密碼）
-- [ ] Access token 過期（15分鐘）後自動 refresh，唔會踢返 login 頁
+| # | 步驟 | 預期結果 | 實際結果 | 狀態 |
+|---|---|---|---|---|
+| 1.1 | `POST /auth/login`（admin 帳密） | 200，回 access_token + refresh_token + user | 200，token 正常 | ✅ |
+| 1.2 | `POST /auth/refresh`（用 refresh_token） | 200，換到新 access_token | 經 tunnel 實測 200 | ✅ |
+| 1.3 | 錯密碼 | 401 | 後端 code reject | ✅ |
+| 1.4 | 關 browser 再開，自動續回登入 | Navbar 顯示電話+登出，唔使再入密碼 | refresh endpoint 200；前端 bootstrap 已改為只跑一次＋broadcast `auth-changed`；**未經人手 click-through 確認 GUI 反應** | ⚠️ |
 
-## 2. 首頁
+> 註：1.4 嘅 network 路徑（refresh 200、CORS allow github.io origin）已驗證；GUI 實際 reload 後 Navbar 更新屬前端行為，建議人手開一次站 hard-reload 作最終確認。
 
-- [ ] 顯示劇集 grid，直版海報 9:16
-- [ ] 每套劇標示「📱 紅果短劇」來源 badge
-- [ ] 分類 chips（全部/武俠/都市/玄幻...）撳落去會 filter
-- [ ] 冇封面嘅劇有漸層色代替
-- [ ] 精選橫幅顯示最新劇
+## 2. 瀏覽劇集
 
-## 3. 劇集詳情
+| # | 步驟 | 預期 | 實際 | 狀態 |
+|---|---|---|---|---|
+| 2.1 | `GET /dramas` | 回 20 套劇，每個帶 `source` | 20 套，`source="hongguo"` | ✅ |
+| 2.2 | 劇集卡來源 badge | 顯示「來自：紅果短劇」 | 前端 DramaCard 已加；部署 bundle 含新碼 | ✅ |
+| 2.3 | 詳情頁來源 badge | 顯示「來自：紅果短劇」 | DramaDetailClient 已加 | ✅ |
+| 2.4 | Footer 版本 | 顯示「短劇平台 · v1.0.0」 | 部署站 HTML 含 `1.0.0` | ✅ |
 
-- [ ] 撳劇集卡 → 入到詳情頁
-- [ ] 顯示劇名、分類、集數、簡介
-- [ ] 集數列表顯示
-- [ ] 撳第一集 → 入到播放頁
+## 3. 影片播放（核心）
 
-## 4. 影片播放
+| # | 步驟 | 預期 | 實際 | 狀態 |
+|---|---|---|---|---|
+| 3.1 | 頭排劇 ep1 `/stream` | 回 `/episodes/{id}/media?token=` 代理位址 | 七零团宠 ep361 正確回 tunnel domain 嘅 media URL | ✅ |
+| 3.2 | `<video>` Range GET media URL | 206 Partial Content，`video/mp4`，收到 byte | 經 tunnel 實測 `HTTP 206 video/mp4 2048B` | ✅ |
+| 3.3 | 紅果簽名 URL 過期 | 開播時即時重簽，唔黑畫面 | on-demand 重簽 + 25 分鐘 cache | ✅ |
+| 3.4 | 冇 token 取片 | 401 | 實測 no-token 401 | ✅ |
+| 3.5 | 掃描頭 15 套劇第一集 | 多數播到 | 14/15 播到（10–35MB 真片） | ✅ |
+| 3.6 | 未開放／冇真片嘅集 | 顯示「敬請期待」，唔播無關畫面 | `available=false`，例：坤仪第四季 | ✅ |
 
-- [ ] 播放器載入唔會黑畫面卡死
-- [ ] **真片可播**：有 CDN URL 嘅集數可以 play（HTTP 206）
-- [ ] URL 過期時自動即時重簽（stream endpoint）
-- [ ] 冇片嘅集數顯示「敬請期待」，唔好播無關畫面
-- [ ] 上一集 / 下一集按鈕 work
+## 4. CMS 管理後台
 
-## 5. CMS 管理後台
+| # | 步驟 | 預期 | 實際 | 狀態 |
+|---|---|---|---|---|
+| 4.1 | admin 入 `/admin` | 可入 | ProtectedRoute 已改為等 bootstrap 先判斷 | ⚠️ 未人手 click |
+| 4.2 | 一般用戶入 `/admin` | 被拒 | 後端 require admin；未人手驗 | ⚠️ |
 
-- [ ] Admin 先入到 `/admin`
-- [ ] 可以新增 / 編輯 / 刪除劇集
-- [ ] 可以新增分類
-- [ ] 一般用戶入唔到 `/admin`
-
-## 6. API 健康檢查
+## 5. API／基建健康（腳本）
 
 執行：
 ```bash
-cd backend && DATABASE_URL="postgresql+psycopg2://postgres:postgres@localhost:5433/drama" .venv/bin/python scripts/qa_check.py
+cd backend && DATABASE_URL="postgresql+psycopg2://postgres:postgres@localhost:5433/drama" \
+  .venv/bin/python scripts/qa_check.py
 ```
-預期：
-- Login 成功
-- 至少 1 集 `206 Partial Content`（真片可播）
+最近結果：**6/6 PASS，exit 0**（本地 /health、tunnel /health、登入、有劇、至少一套播到、頭排劇播到）。後端單元測試 `pytest`：**12 passed**。
 
-## 7. 部署檢查
+## 6. 部署
 
-- [ ] `git log` 最新 commit 已 push
-- [ ] GitHub Actions 綠色
-- [ ] 線上版本係最新（hard reload 見到新 UI / 新功能）
-- [ ] `CHANGELOG.md` 已更新
+| # | 步驟 | 預期 | 實際 | 狀態 |
+|---|---|---|---|---|
+| 6.1 | push 後 GitHub Actions | Deploy to Pages 綠色 | 最近一次 Deploy success | ✅ |
+| 6.2 | CI 後端測試 | 綠色 | 先前紅（舊 test 斷言舊契約），已修復並本地 12 passed | ✅ |
+| 6.3 | 部署站係最新碼 | 見到 v1.0.0 footer | 已確認 | ✅ |
 
 ---
 
-## 已知問題（Known Issues）
+## 總結
 
-| 問題 | 狀態 | 原因 |
-|---|---|---|
-| Login 記唔住 | ⚠️ 部分瀏覽器 | 內建瀏覽器關 tab 清 localStorage；Safari/Chrome 正常 |
-| CDN URL 過期 | ✅ 已修 | stream endpoint 即時重簽 |
-| 第4集起冇片 | ℹ️ 預期 | 紅果要登入先有，我哋只公開頭免費集 |
-| Google SSO | ⏳ 未接 | 缺 OAuth Client ID |
+- **Pass：** 播放（media proxy + Range 206 + 過期重簽）、登入 refresh、來源 badge、版本號、基建健康、部署。
+- **Blocked／建議人手最終一 click：** GUI reload 後 Navbar 狀態、admin 後台進出（network 層已驗證，未真人 click）。

@@ -33,7 +33,10 @@ def test_stream_requires_login(client, auth_headers):
     r = client.get(f"/episodes/{ep['id']}/stream", headers=headers)
     assert r.status_code == 200
     body = r.json()
-    assert body["video_url"] == "https://cdn.example.com/e1.mp4"
+    # 新架構：片源經後端 /media?token= 代理（繞過 CDN Referer 防盗鏈），
+    # 所以 video_url 唔再係上游 CDN 直鏈，而係我哋自己嘅 media proxy 位址。
+    assert body["available"] is True
+    assert f"/episodes/{ep['id']}/media" in body["video_url"]
     assert body["episode"]["id"] == ep["id"]
 
 
