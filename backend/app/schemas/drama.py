@@ -43,3 +43,24 @@ class DramaOut(DramaBase):
 
 class DramaDetail(DramaOut):
     episodes: list[EpisodeOut] = []
+
+
+class DramaListItem(DramaOut):
+    """列表項：比 DramaOut 多一個 DB 真實集數。
+
+    `real_episode_count` 係 `episodes` 表嘅實際行數；同 metadata 欄 `episode_count`
+    （crawler/CMS 填）係兩回事——例如優酷劇 `episode_count` 有值（24）但未爬片，
+    `real_episode_count` 仍然係 0。
+    """
+
+    real_episode_count: int = 0
+
+
+class DramaListEnvelope(BaseModel):
+    """劇集分頁 envelope。"""
+
+    items: list[DramaListItem]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int

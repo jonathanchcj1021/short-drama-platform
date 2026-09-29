@@ -80,12 +80,48 @@ npm run start
 | 要求 OTP 驗證碼 | POST | `/auth/otp/request` |
 | 驗證 OTP 登入 | POST | `/auth/otp/verify` |
 | 分類列表 | GET | `/categories` |
-| 劇集列表（可帶 `?category=`） | GET | `/dramas` |
+| 劇集列表（分頁 envelope；見下方說明） | GET | `/dramas` |
 | 劇集詳情 | GET | `/dramas/{id}` |
 | 劇集觀看進度 | GET | `/dramas/{id}/progress` |
 | 集數詳情 | GET | `/episodes/{id}` |
 | 串流位址 | GET | `/episodes/{id}/stream` |
 | 上報觀看進度 | POST | `/episodes/{id}/progress` |
+
+### `GET /dramas` 分頁 contract
+
+Query 參數：
+
+| 參數 | 型別 | 預設 | 說明 |
+| --- | --- | --- | --- |
+| `page` | int，`ge=1` | `1` | 頁碼，由 1 開始 |
+| `page_size` | int，`1..100` | `24` | 每頁筆數 |
+| `category_id` | int \| null | null | 分類篩選（精確 match） |
+| `search` | str \| null | null | 標題關鍵字 `ILIKE` |
+| `source` | str \| null | null | 來源平台精確 match，例如 `hongguo` / `youku` |
+
+排序固定為 `id desc`。回傳 envelope：
+
+```json
+{
+  "items": [
+    {
+      "id": 1,
+      "title": "...",
+      "episode_count": 24,
+      "real_episode_count": 3,
+      "source": "hongguo",
+      "category": { "id": 1, "name": "...", "slug": "..." }
+    }
+  ],
+  "total": 72,
+  "page": 1,
+  "page_size": 24,
+  "total_pages": 3
+}
+```
+
+> `episode_count` 係 metadata 欄（crawler/CMS 填）；`real_episode_count` 係 `episodes` 表實際筆數。
+> 優酷劇可能 `episode_count=24` 但 `real_episode_count=0`（未爬片）。舊版 bare list（`skip`/`limit`）已移除。
 
 ## 部署說明
 

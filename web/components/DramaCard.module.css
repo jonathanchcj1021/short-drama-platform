@@ -70,6 +70,26 @@
   z-index: 3;
 }
 
+/* 資料卡（優酷式 metadata，未接片源）— 灰底，同真集數 badge 區分 */
+.badgeMeta {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(120, 120, 130, 0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 9px;
+  font-weight: var(--weight-medium);
+  color: rgba(255, 255, 255, 0.95);
+  z-index: 3;
+  max-width: calc(100% - 16px);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .playBtn {
   position: absolute;
   top: 50%;

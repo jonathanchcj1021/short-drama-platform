@@ -14,6 +14,10 @@ interface Props {
   isVip?: boolean;
   /** 呢套劇係咪收費劇（false = 免費劇，全部集數任睇） */
   isPaidDrama?: boolean;
+  /** 空集數時嘅標題（例如「暫時未有片源」）；唔傳就用預設「尚無集數」 */
+  emptyTitle?: string;
+  /** 空集數時嘅副提示（caller 自訂靚版 empty state） */
+  emptyHint?: string;
 }
 
 const FREE_EPISODE_LIMIT = 10;
@@ -24,8 +28,19 @@ export default function EpisodeList({
   progressMap = {},
   isVip = false,
   isPaidDrama = true,
+  emptyTitle,
+  emptyHint,
 }: Props) {
   if (!episodes || episodes.length === 0) {
+    if (emptyTitle) {
+      return (
+        <div className={styles.emptyBox}>
+          <div className={styles.emptyIcon} aria-hidden />
+          <p className={styles.emptyTitle}>{emptyTitle}</p>
+          {emptyHint && <p className={styles.emptyHint}>{emptyHint}</p>}
+        </div>
+      );
+    }
     return <p className={styles.empty}>尚無集數</p>;
   }
 

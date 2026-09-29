@@ -117,7 +117,9 @@ export default function DramaDetailClient() {
           <h1 className={styles.title}>{drama.title}</h1>
           <div className={styles.tags}>
             <span className={styles.tag}>{categoryLabel}</span>
-            {drama.episode_count != null && <span className={styles.tag}>{drama.episode_count} 集</span>}
+            {drama.episodes && drama.episodes.length > 0 && (
+              <span className={styles.tag}>{drama.episodes.length} 集</span>
+            )}
             {drama.release_year != null && <span className={styles.tag}>{drama.release_year}</span>}
             {drama.is_completed && <span className={styles.tagGold}>已完結</span>}
             {from && <span className={styles.tagGold}>來自：{from}</span>}
@@ -141,6 +143,8 @@ export default function DramaDetailClient() {
         progressMap={progressMap}
         isVip={isVip(getUser())}
         isPaidDrama={drama.is_paid !== false}
+        emptyTitle="暫時未有片源"
+        emptyHint="呢套劇暫時未有片源，敬請期待"
       />
     </main>
   );

@@ -3,17 +3,22 @@
 import Link from 'next/link';
 import PosterPlaceholder from './PosterPlaceholder';
 import { sourceLabel } from '@/lib/sources';
-import type { Drama } from '@/types';
+import type { DramaListItem } from '@/types';
 import styles from './DramaCard.module.css';
 
 interface Props {
-  drama: Drama;
+  drama: DramaListItem;
 }
 
 export default function DramaCard({ drama }: Props) {
   const categoryLabel = drama.category?.name ?? drama.category_name ?? '未分類';
   const hasCover = Boolean(drama.cover_url);
   const from = sourceLabel(drama.source);
+
+  // 誠實集數：用 DB 真實集數，唔好再用 metadata episode_count 誤導
+  const realCount = drama.real_episode_count ?? 0;
+  const showRealBadge = realCount > 0;
+  const showMetaBadge = !showRealBadge && realCount === 0 && drama.episode_count != null;
 
   return (
     <Link href={`/drama/?id=${drama.id}`} className={styles.card}>
@@ -30,10 +35,9 @@ export default function DramaCard({ drama }: Props) {
       {/* 頂左分類 chip */}
       <span className={styles.chip}>{categoryLabel}</span>
 
-      {/* 集數 badge（右上角） */}
-      {drama.episode_count != null && (
-        <span className={styles.badge}>{drama.episode_count} 集</span>
-      )}
+      {/* 集數 badge（右上角）：真集數先用「N 集」；淨係 metadata 就講明未接片源 */}
+      {showRealBadge && <span className={styles.badge}>{realCount} 集</span>}
+      {showMetaBadge && <span className={styles.badgeMeta}>資料卡 · 未接片源</span>}
 
       {/* 正中間 hover 播放鈕 */}
       <span className={styles.playBtn} aria-hidden>

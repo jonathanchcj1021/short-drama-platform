@@ -1,6 +1,6 @@
 """劇集公開路由 + 使用者劇集進度。"""
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.core.deps import get_current_user, get_db
@@ -8,27 +8,64 @@ from app.models.drama import Drama
 from app.models.episode import Episode
 from app.models.user import User
 from app.models.watch_progress import WatchProgress
-from app.schemas.drama import DramaDetail, DramaOut
+from app.schemas.drama import DramaDetail, DramaListEnvelope, DramaListItem
 from app.schemas.progress import ProgressOut
 
 router = APIRouter(prefix="/dramas", tags=["dramas"])
 
 
-@router.get("", response_model=list[DramaOut])
+@router.get("", response_model=DramaListEnvelope)
 def list_dramas(
     db: Session = Depends(get_db),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(24, ge=1, le=100),
     category_id: int | None = Query(None),
     search: str | None = Query(None, description="標題關鍵字搜尋"),
-    skip: int = Query(0, ge=0),
-    limit: int = Query(20, ge=1, le=100),
+    source: str | None = Query(None, description="來源平台精確篩選，例如 hongguo / youku"),
 ):
-    stmt = select(Drama).order_by(Drama.id.desc())
+    filters = []
     if category_id is not None:
-        stmt = stmt.where(Drama.category_id == category_id)
+        filters.append(Drama.category_id == category_id)
     if search:
-        stmt = stmt.where(Drama.title.ilike(f"%{search}%"))
-    stmt = stmt.offset(skip).limit(limit)
-    return db.scalars(stmt).all()
+        filters.append(Drama.title.ilike(f"%{search}%"))
+    if source is not None:
+        filters.append(Drama.source == source)
+
+    total = db.scalar(select(func.count()).select_from(Drama).where(*filters)) or 0
+    total_pages = (total + page_size - 1) // page_size if page_size else 0
+
+    stmt = (
+        select(Drama)
+        .where(*filters)
+        .order_by(Drama.id.desc())
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+    )
+    dramas = db.scalars(stmt).all()
+
+    # 一條 grouped query 攞真實集數，避免 N+1
+    count_map: dict[int, int] = {}
+    if dramas:
+        rows = db.execute(
+            select(Episode.drama_id, func.count(Episode.id)).where(
+                Episode.drama_id.in_([d.id for d in dramas])
+            ).group_by(Episode.drama_id)
+        ).all()
+        count_map = {did: cnt for did, cnt in rows}
+
+    items = []
+    for drama in dramas:
+        item = DramaListItem.model_validate(drama)
+        item.real_episode_count = count_map.get(drama.id, 0)
+        items.append(item)
+
+    return DramaListEnvelope(
+        items=items,
+        total=total,
+        page=page,
+        page_size=page_size,
+        total_pages=total_pages,
+    )
 
 
 @router.get("/{drama_id}", response_model=DramaDetail)

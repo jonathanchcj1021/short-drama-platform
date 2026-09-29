@@ -58,6 +58,21 @@ export interface DramaDetail extends Drama {
   episodes: Episode[];
 }
 
+/** 劇集列表項（list endpoint 回傳，多咗 DB 真實集數） */
+export interface DramaListItem extends Drama {
+  /** DB 真實集數：優酷劇為 0（淨係 metadata），紅果劇有真集數 */
+  real_episode_count: number;
+}
+
+/** GET /dramas 分頁回傳 envelope */
+export interface DramaListPage {
+  items: DramaListItem[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}
+
 /** 觀看進度 */
 export interface Progress {
   episode_id: number;
