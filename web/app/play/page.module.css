@@ -240,3 +240,85 @@
   color: rgba(255, 255, 255, 0.55);
   font-size: var(--font-size-md);
 }
+
+/* ===== 廣告倒數 overlay（免費用戶第 11 集起） ===== */
+.adOverlay {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-4);
+  padding: 24px 20px calc(40px + env(safe-area-inset-bottom));
+  z-index: 4;
+}
+
+.adTag {
+  position: absolute;
+  top: calc(14px + env(safe-area-inset-top));
+  left: 16px;
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 3px 10px;
+  border-radius: var(--radius-sm);
+}
+
+.adCreative {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 24px 28px;
+  background: linear-gradient(160deg, #1a1408 0%, #0e0b06 100%);
+  border: 1px solid rgba(245, 185, 66, 0.25);
+  border-radius: var(--radius-lg);
+  min-width: 240px;
+  text-align: center;
+}
+
+.adCreativeEmoji {
+  font-size: 44px;
+  line-height: 1;
+}
+
+.adCreativeTitle {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: var(--weight-bold);
+  color: var(--color-gold);
+}
+
+.adCreativeSub {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.adCountdown {
+  font-family: var(--font-display);
+  font-size: 64px;
+  font-weight: var(--weight-bold);
+  line-height: 1;
+  color: var(--color-gold);
+  text-shadow: 0 0 24px rgba(245, 185, 66, 0.35);
+  font-variant-numeric: tabular-nums;
+}
+
+.adHint {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: var(--font-size-md);
+  text-align: center;
+}
+
+.adError {
+  margin: 0;
+  color: var(--color-error);
+  background: var(--color-error-soft);
+  padding: 8px 14px;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-md);
+}

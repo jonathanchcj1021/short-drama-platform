@@ -66,6 +66,18 @@
   color: var(--color-text-tertiary);
 }
 
+.statusRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 14px;
+}
+
+.lock {
+  font-size: 11px;
+  line-height: 1;
+}
+
 .empty {
   color: var(--color-text-tertiary);
   text-align: center;

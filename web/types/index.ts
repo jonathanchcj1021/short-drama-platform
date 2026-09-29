@@ -24,6 +24,8 @@ export interface Drama {
   is_completed?: boolean;
   /** 來源平台代碼（"hongguo" = 紅果短劇）；後端舊資料可能缺省 */
   source?: string | null;
+  /** false = 呢套劇免費任睇，唔使睇廣告；預設（缺省 / true）係收費劇 */
+  is_paid?: boolean;
   created_at?: string;
 }
 
@@ -37,6 +39,18 @@ export interface Episode {
   /** 時長（秒） */
   duration?: number | null;
   description?: string | null;
+}
+
+/** 廣告影片（CMS 上傳） */
+export interface Ad {
+  id: number;
+  title: string;
+  video_url: string;
+  /** 時長（秒） */
+  duration: number;
+  /** 是否啟用 */
+  active: boolean;
+  created_at?: string;
 }
 
 /** 劇集詳情（含集數列表） */
@@ -60,6 +74,24 @@ export interface User {
   email?: string;
   nickname?: string;
   is_admin?: boolean;
+  /** 會員等級：free = 免費；vip_monthly / vip_yearly = 有效 VIP（後端可能舊用戶未帶此欄位） */
+  membership_tier?: 'free' | 'vip_monthly' | 'vip_yearly';
+  /** VIP 到期日 ISO 字串；free 用戶為 null */
+  vip_expires_at?: string | null;
+  /** 後端算好嘅有效 VIP flag（與 vip_expires_at 一致，前端以 isVip() 為準） */
+  is_vip?: boolean;
+}
+
+/** 訂閱方案 */
+export type BillingPlan = 'monthly' | 'yearly';
+
+/** GET /billing/me 回應 */
+export interface BillingStatus {
+  membership_tier: 'free' | 'vip_monthly' | 'vip_yearly';
+  vip_expires_at: string | null;
+  is_vip: boolean;
+  monthly_price_hkd: number;
+  yearly_price_hkd: number;
 }
 
 /** OTP 要求回應 */

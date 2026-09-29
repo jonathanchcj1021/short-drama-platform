@@ -2,6 +2,7 @@
 from datetime import datetime
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, func
+from sqlalchemy.sql import true
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -26,6 +27,10 @@ class Drama(Base):
     )
     # 紅果後台 series_id（用嚟 on-demand 重新簽 signed video URL），無對應就係 None
     hongguo_series_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    # 係咪收費劇。False = 完全免費、唔設廣告閘；True = 頭 10 集免費、之後要睇廣告或 VIP
+    is_paid: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, server_default=true(), default=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

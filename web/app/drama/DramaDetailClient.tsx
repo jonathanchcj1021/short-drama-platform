@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import EpisodeList from '@/components/EpisodeList';
 import PosterPlaceholder from '@/components/PosterPlaceholder';
 import { apiClient } from '@/lib/apiClient';
-import { isLoggedIn } from '@/lib/auth';
+import { getUser, isLoggedIn, isVip } from '@/lib/auth';
 import { sourceLabel } from '@/lib/sources';
 import type { DramaDetail, Progress } from '@/types';
 import styles from './page.module.css';
@@ -139,6 +139,8 @@ export default function DramaDetailClient() {
         episodes={drama.episodes ?? []}
         currentEpisodeId={progress?.episode_id}
         progressMap={progressMap}
+        isVip={isVip(getUser())}
+        isPaidDrama={drama.is_paid !== false}
       />
     </main>
   );

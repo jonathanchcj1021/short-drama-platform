@@ -1,0 +1,205 @@
+.wrap {
+  min-height: calc(100vh - var(--nav-height));
+  padding: var(--spacing-6) var(--container-pad-x) var(--spacing-16);
+}
+
+.container {
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+.backLink {
+  display: inline-block;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-md);
+  margin-bottom: var(--spacing-4);
+}
+
+.backLink:hover {
+  color: var(--color-text-primary);
+}
+
+.title {
+  margin: 0 0 6px;
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: var(--weight-bold);
+  color: var(--color-text-primary);
+}
+
+.subtitle {
+  margin: 0 0 var(--spacing-6);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-md);
+}
+
+.centerBox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-16) 0;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(255, 255, 255, 0.15);
+  border-top-color: var(--color-accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.error {
+  color: var(--color-error);
+  background: var(--color-error-soft);
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-md);
+  margin: 0 0 var(--spacing-4);
+}
+
+.vipBanner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--color-gold-soft);
+  border: 1px solid rgba(245, 185, 66, 0.4);
+  color: var(--color-gold);
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-md);
+  margin-bottom: var(--spacing-6);
+}
+
+.vipBadge {
+  background: var(--color-gold);
+  color: #1a1408;
+  font-weight: var(--weight-bold);
+  font-size: 12px;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  letter-spacing: 1px;
+}
+
+.plans {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--spacing-4);
+}
+
+.planCard {
+  position: relative;
+  background: var(--gradient-surface);
+  border: 1px solid var(--color-border-default);
+  border-radius: var(--radius-lg);
+  padding: 28px 24px;
+  display: flex;
+  flex-direction: column;
+}
+
+.planCardFeatured {
+  border-color: rgba(245, 185, 66, 0.5);
+  box-shadow: 0 0 0 1px rgba(245, 185, 66, 0.2), var(--shadow-lg);
+}
+
+.featuredTag {
+  position: absolute;
+  top: -11px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--color-gold);
+  color: #1a1408;
+  font-size: 11px;
+  font-weight: var(--weight-bold);
+  padding: 3px 12px;
+  border-radius: var(--radius-full);
+  letter-spacing: 1px;
+}
+
+.planName {
+  margin: 0 0 8px;
+  font-size: var(--font-size-lg);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text-secondary);
+}
+
+.planPrice {
+  margin: 0 0 6px;
+  font-family: var(--font-display);
+  font-size: 36px;
+  font-weight: var(--weight-bold);
+  color: var(--color-text-primary);
+  line-height: 1;
+}
+
+.planPeriod {
+  font-size: 14px;
+  color: var(--color-text-tertiary);
+  font-family: var(--font-sans);
+  font-weight: var(--weight-regular);
+  margin-left: 4px;
+}
+
+.saveNote {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--color-gold);
+}
+
+.planFeatures {
+  margin: 18px 0 24px;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-md);
+  flex: 1;
+}
+
+.planFeatures li::before {
+  content: '✓';
+  color: var(--color-success);
+  margin-right: 8px;
+  font-weight: var(--weight-bold);
+}
+
+.planBtn {
+  background: var(--gradient-accent);
+  color: var(--color-text-on-accent);
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 13px;
+  font-size: 15px;
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+  transition: box-shadow var(--motion-base) var(--ease-out),
+    transform var(--motion-base) var(--ease-out);
+}
+
+.planBtn:hover:not(:disabled) {
+  box-shadow: var(--shadow-accent);
+}
+
+.planBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.footnote {
+  margin: var(--spacing-6) 0 0;
+  text-align: center;
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-sm);
+}
+
+@media (max-width: 640px) {
+  .plans {
+    grid-template-columns: 1fr;
+  }
+  .title {
+    font-size: 26px;
+  }
+}

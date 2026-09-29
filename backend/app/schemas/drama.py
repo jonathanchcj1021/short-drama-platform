@@ -13,6 +13,8 @@ class DramaBase(BaseModel):
     release_year: int | None = Field(None, ge=1900, le=2100)
     episode_count: int | None = Field(None, ge=0)
     is_completed: bool = False
+    # 係咪收費劇。False = 完全免費；True = 頭 10 集免費、之後要睇廣告或 VIP
+    is_paid: bool = True
 
 
 class DramaCreate(DramaBase):
@@ -27,6 +29,7 @@ class DramaUpdate(BaseModel):
     release_year: int | None = Field(None, ge=1900, le=2100)
     episode_count: int | None = Field(None, ge=0)
     is_completed: bool | None = None
+    is_paid: bool | None = None
 
 
 class DramaOut(DramaBase):

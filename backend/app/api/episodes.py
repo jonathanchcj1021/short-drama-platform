@@ -6,10 +6,12 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.billing import FREE_EPISODE_LIMIT, effective_is_vip
 from app.core.deps import get_current_user, get_db
 from app.core.security import TokenError, decode_token
 from app.models.drama import Drama
 from app.models.episode import Episode
+from app.models.episode_unlock import EpisodeUnlock
 from app.models.user import User
 from app.models.watch_progress import WatchProgress
 from app.schemas.episode import EpisodeOut
@@ -24,6 +26,8 @@ class StreamOut(BaseModel):
     video_url: str
     # 係咪有真片可播。False 時前端要顯示「敬請期待」占位，唔好黑畫面。
     available: bool = True
+    # True = 呢集要睇 20 秒廣告先可以播（video_url 會係空字串）
+    requires_ad: bool = False
     message: str | None = None
 
 
@@ -63,6 +67,31 @@ def _resolve_upstream_url(
     return ep.video_url
 
 
+def _has_stream_access(user: User, ep: Episode, drama: Drama | None, db: Session) -> bool:
+    """決定用戶而家可不可以即時播呢集。
+
+    規則：
+    1. 劇唔存在 / 唔係收費劇 → 完全開放
+    2. 有效 VIP → 全部任睇
+    3. 集數 <= 頭 N 集 → 免費任睇
+    4. EpisodeUnlock 有記錄（睇過廣告解鎖）→ 開放
+    5. 否則要睇廣告
+    """
+    if drama is None or not drama.is_paid:
+        return True
+    if effective_is_vip(user):
+        return True
+    if ep.episode_number <= FREE_EPISODE_LIMIT:
+        return True
+    unlock = db.scalar(
+        select(EpisodeUnlock).where(
+            EpisodeUnlock.user_id == user.id,
+            EpisodeUnlock.episode_id == ep.id,
+        )
+    )
+    return unlock is not None
+
+
 @router.get("/{episode_id}/stream", response_model=StreamOut)
 def stream_episode(
     episode_id: int,
@@ -78,6 +107,16 @@ def stream_episode(
     upstream = _resolve_upstream_url(ep, drama, db)
     if upstream is None:
         return StreamOut(episode=ep, video_url="", available=False, message="此集敬請期待")
+
+    # 免費用戶未解鎖嘅集：要睇廣告
+    if not _has_stream_access(current_user, ep, drama, db):
+        return StreamOut(
+            episode=ep,
+            video_url="",
+            available=True,
+            requires_ad=True,
+            message="免費用戶可免費觀看頭10集，之後需觀看廣告解鎖",
+        )
 
     # 紅果 CDN 有 Referer 防盗鏈（外站 Referer 返 403），所以片經我哋後端代理：
     # 前端只係 request 我哋呢個 domain，唔會帶出 github.io 嘅 Referer。
@@ -111,11 +150,19 @@ def media_proxy(
     token: str | None = Query(default=None),
     db: Session = Depends(get_db),
 ):
-    _user = _authorize_media(token, db)
+    user = _authorize_media(token, db)
     ep = db.get(Episode, episode_id)
     if ep is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="集數不存在")
     drama = db.get(Drama, ep.drama_id)
+
+    # 同 stream endpoint 一樣嘅閘，防止用戶直接打 media URL 繞過廣告
+    if not _has_stream_access(user, ep, drama, db):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="此集需觀看廣告解鎖",
+        )
+
     upstream = _resolve_upstream_url(ep, drama, db)
     if upstream is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="此集敬請期待")
@@ -161,6 +208,30 @@ def media_proxy(
             client.close()
 
     return StreamingResponse(gen(), status_code=up_status, headers=resp_headers)
+
+
+@router.post("/{episode_id}/unlock")
+def unlock_episode(
+    episode_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """睇完 20 秒廣告之後 call 呢個 endpoint 解鎖呢集。Idempotent。"""
+    ep = db.get(Episode, episode_id)
+    if ep is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="集數不存在")
+
+    existing = db.scalar(
+        select(EpisodeUnlock).where(
+            EpisodeUnlock.user_id == current_user.id,
+            EpisodeUnlock.episode_id == episode_id,
+        )
+    )
+    if existing is None:
+        db.add(EpisodeUnlock(user_id=current_user.id, episode_id=episode_id))
+        db.commit()
+
+    return {"episode_id": episode_id, "unlocked": True}
 
 
 @router.post("/{episode_id}/progress", response_model=ProgressOut)

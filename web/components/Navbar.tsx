@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { getUser, isLoggedIn, clearAuth } from '@/lib/auth';
+import { getUser, isLoggedIn, clearAuth, isVip, formatVipExpiry } from '@/lib/auth';
 import type { User } from '@/types';
 import styles from './Navbar.module.css';
 
@@ -55,6 +55,18 @@ export default function Navbar() {
                 <Link href="/admin" className={styles.adminLink}>
                   管理
                 </Link>
+              )}
+              {isVip(user) ? (
+                <span className={styles.vipBadge} title="VIP 會員">
+                  VIP · 到期 {formatVipExpiry(user)}
+                </span>
+              ) : (
+                <>
+                  <span className={styles.freeBadge}>免費會員</span>
+                  <Link href="/upgrade" className={styles.upgradeLink}>
+                    升級 VIP
+                  </Link>
+                </>
               )}
               {displayPhone && <span className={styles.phone}>{displayPhone}</span>}
               <button type="button" className={styles.logoutBtn} onClick={handleLogout}>

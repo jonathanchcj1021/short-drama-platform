@@ -19,6 +19,14 @@ class User(Base):
     password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
     # CMS 管理權限
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false", nullable=False)
+    # 會員等級：free / vip_monthly / vip_yearly
+    membership_tier: Mapped[str] = mapped_column(
+        String(20), nullable=False, server_default="free", default="free"
+    )
+    # VIP 到期日（UTC；NULL 或已過期即視為免費用戶）
+    vip_expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

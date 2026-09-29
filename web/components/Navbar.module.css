@@ -118,6 +118,44 @@
   border-color: var(--color-accent);
 }
 
+/* 免費會員 badge：金邊灰底 */
+.freeBadge {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  border: 1px solid rgba(245, 185, 66, 0.45);
+  background: rgba(245, 185, 66, 0.08);
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+}
+
+/* 升級 VIP link */
+.upgradeLink {
+  font-size: var(--font-size-sm);
+  font-weight: var(--weight-semibold);
+  color: #1a1408;
+  background: var(--color-gold);
+  padding: 6px 14px;
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+  transition: box-shadow var(--motion-fast) var(--ease-out);
+}
+
+.upgradeLink:hover {
+  box-shadow: 0 4px 16px rgba(245, 185, 66, 0.35);
+}
+
+/* VIP badge：金底黑字 */
+.vipBadge {
+  font-size: var(--font-size-sm);
+  font-weight: var(--weight-semibold);
+  color: #1a1408;
+  background: var(--color-gold);
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+}
+
 @media (max-width: 640px) {
   .inner {
     padding: 0 16px;

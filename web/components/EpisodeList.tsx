@@ -10,9 +10,21 @@ interface Props {
   currentEpisodeId?: number;
   /** 觀看進度對照表：episodeId -> positionSec */
   progressMap?: Record<number, number>;
+  /** 目前用家是否有效 VIP（VIP 唔使睇廣告，全部解鎖） */
+  isVip?: boolean;
+  /** 呢套劇係咪收費劇（false = 免費劇，全部集數任睇） */
+  isPaidDrama?: boolean;
 }
 
-export default function EpisodeList({ episodes, currentEpisodeId, progressMap = {} }: Props) {
+const FREE_EPISODE_LIMIT = 10;
+
+export default function EpisodeList({
+  episodes,
+  currentEpisodeId,
+  progressMap = {},
+  isVip = false,
+  isPaidDrama = true,
+}: Props) {
   if (!episodes || episodes.length === 0) {
     return <p className={styles.empty}>尚無集數</p>;
   }
@@ -22,6 +34,8 @@ export default function EpisodeList({ episodes, currentEpisodeId, progressMap = 
       {episodes.map((ep) => {
         const watched = progressMap[ep.id] !== undefined;
         const isCurrent = ep.id === currentEpisodeId;
+        // 收費劇 + 非 VIP + 超過頭 10 集 → 顯示 🔒（用家撳入去先真正判斷要唔要睇廣告）
+        const locked = isPaidDrama && !isVip && ep.episode_number > FREE_EPISODE_LIMIT;
         return (
           <li key={ep.id}>
             <Link
@@ -30,11 +44,18 @@ export default function EpisodeList({ episodes, currentEpisodeId, progressMap = 
             >
               <span className={styles.num}>{ep.episode_number}</span>
               <span className={styles.title}>{ep.title || `第 ${ep.episode_number} 集`}</span>
-              {isCurrent ? (
-                <span className={styles.now}>播放中</span>
-              ) : watched ? (
-                <span className={styles.watched}>已看</span>
-              ) : null}
+              <span className={styles.statusRow}>
+                {isCurrent ? (
+                  <span className={styles.now}>播放中</span>
+                ) : watched ? (
+                  <span className={styles.watched}>已看</span>
+                ) : null}
+                {locked && (
+                  <span className={styles.lock} aria-label="需觀看廣告解鎖">
+                    🔒
+                  </span>
+                )}
+              </span>
             </Link>
           </li>
         );

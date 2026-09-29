@@ -62,3 +62,28 @@ export function clearAuth(): void {
   window.localStorage.removeItem(REFRESH_TOKEN_KEY);
   window.localStorage.removeItem(USER_KEY);
 }
+
+/**
+ * 判斷用家是否有效 VIP。
+ * 條件：membership_tier 唔係 free、有 vip_expires_at、而且到期日未過。
+ * 純前端計算，唔依賴後端 is_vip flag（避免 clock skew ／ 本機舊資料唔一致）。
+ */
+export function isVip(user: User | null): boolean {
+  if (!user) return false;
+  if (!user.membership_tier || user.membership_tier === 'free') return false;
+  if (!user.vip_expires_at) return false;
+  const exp = new Date(user.vip_expires_at);
+  if (Number.isNaN(exp.getTime())) return false;
+  return exp.getTime() > Date.now();
+}
+
+/** 格式化 VIP 到期日做 YYYY-MM-DD（local timezone）；無效回傳空字串 */
+export function formatVipExpiry(user: User | null): string {
+  if (!user?.vip_expires_at) return '';
+  const d = new Date(user.vip_expires_at);
+  if (Number.isNaN(d.getTime())) return '';
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}

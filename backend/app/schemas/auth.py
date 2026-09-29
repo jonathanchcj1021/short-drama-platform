@@ -1,5 +1,7 @@
 """認證相關 Schema。"""
-from pydantic import BaseModel, Field
+from datetime import datetime, timezone
+
+from pydantic import BaseModel, Field, model_validator
 
 
 class OTPRequest(BaseModel):
@@ -21,8 +23,23 @@ class UserOut(BaseModel):
     email: str | None = None
     nickname: str | None = None
     is_admin: bool = False
+    membership_tier: str = "free"
+    vip_expires_at: datetime | None = None
+    # 實際係咪有效 VIP（由 membership_tier + vip_expires_at 即時計算，唔靠 ORM 預填）
+    is_vip: bool = False
 
     model_config = {"from_attributes": True}
+
+    @model_validator(mode="after")
+    def _compute_is_vip(self) -> "UserOut":
+        if self.membership_tier in ("vip_monthly", "vip_yearly") and self.vip_expires_at is not None:
+            exp = self.vip_expires_at
+            if exp.tzinfo is None:
+                exp = exp.replace(tzinfo=timezone.utc)
+            self.is_vip = exp > datetime.now(timezone.utc)
+        else:
+            self.is_vip = False
+        return self
 
 
 class TokenPair(BaseModel):

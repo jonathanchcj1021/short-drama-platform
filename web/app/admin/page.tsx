@@ -2,12 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { apiClient } from '@/lib/apiClient';
+import { apiClient, BASE_URL } from '@/lib/apiClient';
 import { getAccessToken } from '@/lib/auth';
-import type { Category, Drama, DramaDetail, Episode } from '@/types';
+import type { Ad, Category, Drama, DramaDetail, Episode } from '@/types';
 import styles from './page.module.css';
 
-type Tab = 'dramas' | 'categories' | 'episodes';
+type Tab = 'dramas' | 'categories' | 'episodes' | 'ads';
 
 interface DramaForm {
   title: string;
@@ -107,6 +107,14 @@ export default function AdminPage() {
   const [editingEpId, setEditingEpId] = useState<number | null>(null);
   const [epForm, setEpForm] = useState<EpisodeForm>(EMPTY_EP_FORM);
   const [loadingEp, setLoadingEp] = useState(false);
+
+  // 廣告
+  const [ads, setAds] = useState<Ad[]>([]);
+  const [adTitle, setAdTitle] = useState('');
+  const [adDuration, setAdDuration] = useState('20');
+  const [adFile, setAdFile] = useState<File | null>(null);
+  const [uploadingAd, setUploadingAd] = useState(false);
+  const [loadingAds, setLoadingAds] = useState(false);
 
   // 權限檢查：無 token → 去登入；非 admin → 顯示無權限
   useEffect(() => {
@@ -362,6 +370,109 @@ export default function AdminPage() {
     }
   };
 
+  // ---------- Ad CRUD ----------
+  const loadAds = useCallback(async () => {
+    setLoadingAds(true);
+    try {
+      const list = await apiClient<Ad[]>('/cms/ads');
+      setAds(list ?? []);
+    } catch (e) {
+      setMsg(`載入廣告失敗：${errMsg(e)}`);
+      setAds([]);
+    } finally {
+      setLoadingAds(false);
+    }
+  }, []);
+
+  // 入到廣告 tab 時載入
+  useEffect(() => {
+    if (isAdmin && tab === 'ads') loadAds();
+  }, [isAdmin, tab, loadAds]);
+
+  const uploadAd = async () => {
+    if (!adTitle.trim()) {
+      setMsg('廣告標題要填');
+      return;
+    }
+    if (!adFile) {
+      setMsg('請揀一個 mp4 影片檔');
+      return;
+    }
+    const token = getAccessToken();
+    if (!token) {
+      router.replace('/login');
+      return;
+    }
+    const formData = new FormData();
+    formData.append('title', adTitle.trim());
+    formData.append('duration', adDuration.trim() === '' ? '20' : adDuration.trim());
+    formData.append('file', adFile);
+
+    setUploadingAd(true);
+    setMsg(null);
+    try {
+      // multipart 上傳：自己 fetch，唔用 apiClient（佢固定送 JSON）；
+      // 唔好手動設 Content-Type，等瀏覽器自動帶 boundary。
+      const res = await fetch(`${BASE_URL}/cms/ads/upload`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+        credentials: 'omit',
+        cache: 'no-store',
+      });
+      if (!res.ok) {
+        let detail = `上傳失敗（${res.status}）`;
+        try {
+          const data = await res.json();
+          if (data && typeof data.detail === 'string') detail = data.detail;
+        } catch {
+          // ignore
+        }
+        throw new Error(detail);
+      }
+      setAdTitle('');
+      setAdDuration('20');
+      setAdFile(null);
+      const input = document.querySelector<HTMLInputElement>('input[type="file"][accept="video/mp4"]');
+      if (input) input.value = '';
+      setMsg('已上傳廣告影片');
+      await loadAds();
+    } catch (e) {
+      setMsg(`上傳失敗：${errMsg(e)}`);
+    } finally {
+      setUploadingAd(false);
+    }
+  };
+
+  const toggleAdActive = async (ad: Ad) => {
+    setBusy(true);
+    setMsg(null);
+    try {
+      await apiClient(`/cms/ads/${ad.id}`, { method: 'PUT', body: { active: !ad.active } });
+      setMsg(ad.active ? '已停用廣告' : '已啟用廣告');
+      await loadAds();
+    } catch (e) {
+      setMsg(`切換狀態失敗：${errMsg(e)}`);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const deleteAd = async (ad: Ad) => {
+    if (!window.confirm(`確定刪除廣告「${ad.title}」？連影片檔都會一併刪除。`)) return;
+    setBusy(true);
+    setMsg(null);
+    try {
+      await apiClient(`/cms/ads/${ad.id}`, { method: 'DELETE' });
+      setMsg(`已刪除廣告「${ad.title}」`);
+      await loadAds();
+    } catch (e) {
+      setMsg(`刪除失敗：${errMsg(e)}`);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   // ---------- Render ----------
   if (checking) {
     return (
@@ -410,6 +521,13 @@ export default function AdminPage() {
             onClick={() => setTab('episodes')}
           >
             集數管理
+          </button>
+          <button
+            type="button"
+            className={`${styles.tab} ${tab === 'ads' ? styles.tabActive : ''}`}
+            onClick={() => setTab('ads')}
+          >
+            廣告管理（{ads.length}）
           </button>
         </nav>
       </header>
@@ -765,6 +883,106 @@ export default function AdminPage() {
             </table>
             {episodes.length === 0 && !loadingEp && (
               <div className={styles.empty}>呢部劇未有集數（或未揀劇集）</div>
+            )}
+          </div>
+        </section>
+      )}
+
+      {tab === 'ads' && (
+        <section>
+          <div className={styles.formCard}>
+            <h2 className={styles.formTitle}>上傳廣告影片</h2>
+            <div className={styles.formGrid}>
+              <label className={styles.field}>
+                <span>標題 *</span>
+                <input
+                  className={styles.input}
+                  value={adTitle}
+                  onChange={(e) => setAdTitle(e.target.value)}
+                  placeholder="如：開場廣告 A"
+                />
+              </label>
+              <label className={styles.field}>
+                <span>時長（秒）</span>
+                <input
+                  className={styles.input}
+                  inputMode="numeric"
+                  value={adDuration}
+                  onChange={(e) => setAdDuration(e.target.value.replace(/\D/g, ''))}
+                  placeholder="預設 20"
+                />
+              </label>
+              <label className={styles.fieldWide}>
+                <span>影片檔（mp4）*</span>
+                <input
+                  type="file"
+                  accept="video/mp4"
+                  onChange={(e) => setAdFile(e.target.files && e.target.files[0] ? e.target.files[0] : null)}
+                />
+              </label>
+            </div>
+            <div className={styles.formActions}>
+              <button type="button" className={styles.primaryBtn} disabled={uploadingAd} onClick={uploadAd}>
+                {uploadingAd ? '上傳中…' : '上傳廣告'}
+              </button>
+            </div>
+          </div>
+
+          {loadingAds && <div className={styles.centerMsg}>載入廣告中…</div>}
+
+          <div className={styles.tableWrap}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>預覽</th>
+                  <th>標題</th>
+                  <th>時長</th>
+                  <th>狀態</th>
+                  <th>操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                {ads.map((ad) => (
+                  <tr key={ad.id}>
+                    <td>
+                      <video
+                        src={`${BASE_URL}${ad.video_url}`}
+                        controls
+                        muted
+                        style={{ width: 160, display: 'block' }}
+                      />
+                    </td>
+                    <td className={styles.cellTitle}>{ad.title}</td>
+                    <td>{ad.duration}s</td>
+                    <td>
+                      <span className={`${styles.badge} ${ad.active ? styles.badgeDone : styles.badgeOngoing}`}>
+                        {ad.active ? '啟用中' : '已停用'}
+                      </span>
+                    </td>
+                    <td>
+                      <button
+                        type="button"
+                        className={styles.smallBtn}
+                        disabled={busy}
+                        onClick={() => toggleAdActive(ad)}
+                      >
+                        {ad.active ? '停用' : '啟用'}
+                      </button>
+                      <button
+                        type="button"
+                        className={`${styles.smallBtn} ${styles.dangerBtn}`}
+                        disabled={busy}
+                        onClick={() => deleteAd(ad)}
+                      >
+                        刪除
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {ads.length === 0 && !loadingAds && (
+              <div className={styles.empty}>未上傳任何廣告影片</div>
             )}
           </div>
         </section>
