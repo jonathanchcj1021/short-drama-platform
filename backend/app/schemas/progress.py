@@ -1,12 +1,15 @@
 """觀看進度 Schema。"""
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ProgressReport(BaseModel):
-    current_time: int = Field(..., ge=0)  # 秒
-    duration: int | None = Field(None, ge=0)
+    # 前端送 position_sec / duration_sec；向後兼容舊欄位名 current_time / duration。
+    model_config = ConfigDict(populate_by_name=True)
+
+    current_time: int = Field(..., ge=0, alias="position_sec")  # 秒
+    duration: int | None = Field(None, ge=0, alias="duration_sec")
     completed: bool = False
 
 
