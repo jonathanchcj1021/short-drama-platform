@@ -3,7 +3,7 @@
 本檔記錄每次 release。格式：版本、日期、更新內容、Git commit short SHA。
 
 ## [v1.3.0] - 2026-09-29
-Commit: _（push 後補）_
+Commit: 0fa4c85
 
 ### 新增 — YouTube 官方免費片源接入（video_type + PlayClient iframe）
 - **`episodes` 加 `video_type` column**（migration `d2e3f4a5b6c7`，`String(20)` nullable，預設 NULL）。NULL = 舊行為直片 mp4（走後端 media proxy）；`'youtube'` = YouTube 官方片。
@@ -30,8 +30,10 @@ Commit: _（push 後補）_
 - **潛在未接**：68 反诈·猎蜂者、78 魔方游戏之罪杀 YouTube 後段集數設為 Members only（付費會員牆，只得頭幾集免費）；75 凤骨琉璃愛奇藝免費但 SPA 爬唔到。
 - 完整總表見 `SOURCE_AUDIT_REPORT.md`。
 
-### 已知 — 地區封鎖（如實記錄）
-- YouTube 官方影片描述註明「部分地區（港／澳／台／東南亞）正片請移步優酷國際版 APP」。實測本機（香港）：playlist 頁被 YouTube 標示「系統已隐藏 N 个无法播放的视频」，多數集數 iframe 會顯示地區封鎖；僅個別集（如 EP01/EP02）可喺香港免費播放。詳見實測截圖與 `SOURCE_AUDIT_REPORT.md`。
+### 已知 — 地區封鎖（如實記錄，本機香港實測）
+- YouTube 官方影片描述註明「部分地區（港／澳／台／東南亞）正片請移步優酷國際版 APP」。
+- **端到端流程全部正常**：首頁「YouTube」tab 列出 5 部劇（帶「YouTube 官方」badge＋真實集數）、詳情頁 24/30 集、第 11 集起 🔒、EP12 正確出 20 秒廣告閘、解鎖後 iframe 載入正確 `youtube.com/embed/{id}`。
+- **但喺香港本機實際畫面：iframe 載入到 YouTube player chrome（影片標題＋YOUKU English 官方頻名都正常顯示），影片畫面係黑色**——即 YouTube 對**嵌入播放（embed）**喺香港地區有限制；直接開 `youtube.com/watch?v=...` 喺香港係播到嘅（實測 EP01 約 11.7 分鐘正片可播，有 foodpanda 前貼廣告）。換言之呢批片源對**香港以外**（美／加／英等）觀眾係合法免費可播，香港訪客會見到黑畫面。截圖見 `artifacts/screenshots/`。
 
 ### 其他
 - 後端測試維持 14 passed。
