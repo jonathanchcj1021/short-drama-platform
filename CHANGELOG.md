@@ -2,6 +2,24 @@
 
 本檔記錄每次 release。格式：版本、日期、更新內容、Git commit short SHA。
 
+## [v1.2.1] - 2026-09-29
+Commit: e47e2a0
+
+### 新增 — 首頁「全部劇」一頁睇晒＋分頁
+- **`/dramas` API 升級做分頁 envelope**：回傳 `{items, total, page, page_size, total_pages}`；支援 `page`（1 起）、`page_size`（預設 24，上限 100）、`category_id`、`search`，並新增 `source` 精確篩選（hongguo／youku）。每項新增 `real_episode_count`（DB 真實集數，一條 grouped query 計出嚟，冇 N+1）。
+- **首頁加「來源 filter」tab**：全部來源／紅果短劇／優酷短劇，同分類 tab 並用；篩選變更自動返第 1 頁。
+- **分頁控制**：grid 下面加上一頁／下一頁制＋頁碼制（最多 7 個實頁碼＋省略號 window），每頁 24 部，顯示「共 N 部 · 第 X / Y 頁」，轉頁自動捲返頂。
+- Hero 精選區改獨立 fetch（最新一部），冇任何 filter 先顯示。
+
+### 修復 — 優酷劇誠實標示（唔再誤導）
+- 優酷 40 部劇原本淨係 metadata（0 集），卡片之前會誤導顯示「24 集」等 metadata 集數；而家改用 `real_episode_count` 判斷：真集數先顯示「N 集」，淨 metadata 嘅顯示「資料卡 · 未接片源」badge。
+- 詳情頁：集數 tag 改用真實集數；冇片源嘅劇顯示「暫時未有片源，敬請期待」空狀態，唔會再見到假集數。
+- **優酷片源複測**（`backend/scripts/crawler/YOUKU_PLAY_PROBE.md`）：實測 v.youku.com 播放頁 SSR 全部 `videoUpsStream:null`＋DRM/licenseServer＋VIP paywall；唯一串流 endpoint `ups.youku.com/ups/get.json` 要官方 ccode＋反爬 JS 鑄造嘅 utid，server-side 拎唔到；搜尋卡片嘅 previewId 只係 34 秒宣傳剪片。結論：優酷 metadata-only 係誠實做法，UI 明確標示未接片源，用戶唔會再撳入去見到「24 集」但零片。
+
+### 其他
+- Web version 1.1.1 → 1.2.1（footer 顯示）。
+- 後端測試 +2（source filter、real_episode_count），共 14 passed。
+
 ## [v1.1.1] - 2026-09-29
 Commit: 4b08dad
 
@@ -13,7 +31,7 @@ Commit: 4b08dad
 
 
 ## [v1.2.0] - 2026-09-29
-Commit: _（待 deploy 後補）_
+Commit: 30fe1f3（已 deploy）
 
 ### 新增 — 多來源短劇爬蟲（唔再淨係紅果）
 - **優酷短劇（youku）**：新增公開搜尋結果頁爬蟲 `backend/scripts/crawler/youku.py`，由 `so.youku.com` 短劇關鍵字 SSR 頁（`window.__INITIAL_DATA__` JSON）抽劇名／封面／集數／獨播 VIP 角標／年份／簡介。**只匯入 metadata**：優酷正片全 DRM/VIP，攞唔到公開片 URL，集數留空，唔造假。實際匯入 **40 部優酷短劇**。
@@ -27,7 +45,7 @@ Commit: _（待 deploy 後補）_
 
 
 ## [v1.1.0] - 2026-09-29
-Commit: _（待 deploy 後補）_
+Commit: 5d6d1f3（已 deploy）
 
 ### 新增 — 免費 / VIP 會員制（Freemium）
 - **會員等級**：`users` 加 `membership_tier`（`free` / `vip_monthly` / `vip_yearly`，預設 `free`）同 `vip_expires_at`；migration `b1c2d3e4f5a6`。有效 VIP = tier 非 free 且 `vip_expires_at` 未過期。
