@@ -22,6 +22,8 @@ export interface Drama {
   episode_count: number | null;
   release_year?: number | null;
   is_completed?: boolean;
+  /** 來源平台代碼（"hongguo" = 紅果短劇）；後端舊資料可能缺省 */
+  source?: string | null;
   created_at?: string;
 }
 

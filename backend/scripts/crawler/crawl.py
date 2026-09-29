@@ -151,6 +151,8 @@ def import_items(db, items: list[ShortDramaItem]) -> dict:
             category_id=category.id if category else None,
             episode_count=item.episode_count,
             is_completed=item.is_completed,
+            source=_sanitize(item.source) or "hongguo",
+            hongguo_series_id=_sanitize(item.series_id),
         )
         if existing:
             for k, v in fields.items():

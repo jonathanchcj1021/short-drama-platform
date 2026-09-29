@@ -5,11 +5,13 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.deps import get_current_user, get_db
+from app.models.drama import Drama
 from app.models.episode import Episode
 from app.models.user import User
 from app.models.watch_progress import WatchProgress
 from app.schemas.episode import EpisodeOut
 from app.schemas.progress import ProgressOut, ProgressReport
+from app.services import hongguo_refresh
 
 router = APIRouter(prefix="/episodes", tags=["episodes"])
 
@@ -17,6 +19,9 @@ router = APIRouter(prefix="/episodes", tags=["episodes"])
 class StreamOut(BaseModel):
     episode: EpisodeOut
     video_url: str
+    # 係咪有真片可播。False 時前端要顯示「敬請期待」占位，唔好黑畫面。
+    available: bool = True
+    message: str | None = None
 
 
 @router.get("/{episode_id}", response_model=EpisodeOut)
@@ -36,7 +41,49 @@ def stream_episode(
     ep = db.get(Episode, episode_id)
     if ep is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="集數不存在")
-    return StreamOut(episode=ep, video_url=ep.video_url)
+
+    placeholder = "此集敬請期待"
+
+    # 1) 占位片（placeholder-soon.mp4）：優雅返「冇片」狀態，等前端顯示海報。
+    if hongguo_refresh.is_placeholder_url(ep.video_url):
+        return StreamOut(
+            episode=ep, video_url="", available=False, message=placeholder
+        )
+
+    # 2) 本機 static mp4 / 其他非紅果 URL：原價返。
+    if not hongguo_refresh.is_hongguo_signed_url(ep.video_url):
+        return StreamOut(episode=ep, video_url=ep.video_url, available=True)
+
+    # 3) 紅果 signed URL：探活；死咗就即時重簽。
+    drama = db.get(Drama, ep.drama_id)
+    series_id = drama.hongguo_series_id if drama else None
+    new_url, used_path = hongguo_refresh.resolve_hongguo_url(
+        episode_id=ep.id,
+        drama_series_id=series_id,
+        episode_number=ep.episode_number,
+        stored_player_path=ep.player_path,
+        old_url=ep.video_url,
+    )
+
+    if not new_url:
+        # 拎唔到新片（冇 mapping / 紅果抽唔到）：優雅顯示「敬請期待」。
+        return StreamOut(
+            episode=ep, video_url="", available=False, message=placeholder
+        )
+
+    # 順手將新 URL + player_path 寫回 DB。
+    changed = False
+    if new_url != ep.video_url:
+        ep.video_url = new_url
+        changed = True
+    if used_path and used_path != ep.player_path:
+        ep.player_path = used_path
+        changed = True
+    if changed:
+        db.commit()
+        db.refresh(ep)
+
+    return StreamOut(episode=ep, video_url=new_url, available=True)
 
 
 @router.post("/{episode_id}/progress", response_model=ProgressOut)

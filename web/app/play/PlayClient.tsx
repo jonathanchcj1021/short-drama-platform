@@ -10,6 +10,9 @@ import styles from './page.module.css';
 
 interface StreamResponse {
   video_url: string;
+  /** false = 呢集冇真片，要顯示「敬請期待」占位（唔好黑畫面） */
+  available?: boolean;
+  message?: string | null;
 }
 
 interface EpisodeDetail extends Episode {
@@ -34,12 +37,18 @@ function PlayInner() {
   const [videoUrl, setVideoUrl] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // 呢集冇真片（後端 available=false）→ 顯示「敬請期待」海報
+  const [comingSoon, setComingSoon] = useState(false);
+  // <video> 自己播唔到（例如 CDN 唔穩定）→ 顯示重試，唔好黑畫面
+  const [videoError, setVideoError] = useState(false);
 
   // 拉集數資訊 + 串流位址
   const loadEpisode = () => {
     if (!episodeId) return;
     setLoading(true);
     setError(null);
+    setComingSoon(false);
+    setVideoError(false);
 
     Promise.all([
       apiClient<EpisodeDetail>(`/episodes/${episodeId}`),
@@ -47,6 +56,12 @@ function PlayInner() {
     ])
       .then(([ep, stream]) => {
         setEpisode(ep);
+        // 後端話呢集冇片：唔好 setVideoUrl（避免黑畫面），改顯示占位。
+        if (stream.available === false) {
+          setComingSoon(true);
+          setVideoUrl('');
+          return;
+        }
         setVideoUrl(stream.video_url);
       })
       .catch((e: { message?: string }) => setError(e.message ?? '載入失敗'))
@@ -111,6 +126,36 @@ function PlayInner() {
     );
   }
 
+  // 呢集仲未有片：優雅「敬請期待」海報，唔好黑畫面。
+  if (comingSoon) {
+    return (
+      <div className={styles.stage}>
+        <div className={styles.phone}>
+          <div className={styles.topBar}>
+            <Link href={episode?.drama_id ? `/drama/?id=${episode.drama_id}` : '/'} className={styles.backBtn}>
+              ‹ 返回
+            </Link>
+            <span className={styles.topTitle}>
+              {episode?.drama_title ? episode.drama_title : '播放'}
+            </span>
+          </div>
+          <div className={styles.centerBox}>
+            <p className={styles.comingSoonEmoji} aria-hidden>🎬</p>
+            <p className={styles.comingSoonTitle}>敬請期待</p>
+            <p className={styles.comingSoonSub}>此集暫時未能播放，將於稍後上線</p>
+            <button type="button" className={styles.retryBtn} onClick={loadEpisode}>
+              重新整理
+            </button>
+          </div>
+          <div className={styles.bottomBar}>
+            <h1 className={styles.title}>第 {episode?.episode_number} 集</h1>
+            <p className={styles.epTitle}>{episode?.title}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={styles.stage}>
       <div className={styles.phone}>
@@ -121,7 +166,25 @@ function PlayInner() {
           autoPlay
           playsInline
           className={styles.video}
+          onError={() => setVideoError(true)}
         />
+
+        {/* 影片出錯（CDN 唔穩定等）：遮蓋住黑畫面，俾人重試 */}
+        {videoError && (
+          <div className={styles.centerBox}>
+            <p className={styles.errorPill}>此集暫時無法播放，敬請期待</p>
+            <button
+              type="button"
+              className={styles.retryBtn}
+              onClick={() => {
+                setVideoError(false);
+                loadEpisode();
+              }}
+            >
+              重試
+            </button>
+          </div>
+        )}
 
         {/* 頂部 overlay：返回 + 標題 */}
         <div className={styles.topBar}>

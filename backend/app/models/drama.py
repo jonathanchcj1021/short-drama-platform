@@ -20,6 +20,12 @@ class Drama(Base):
     release_year: Mapped[int | None] = mapped_column(Integer, nullable=True)
     episode_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
     is_completed: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    # 來源平台代碼（例如 "hongguo" = 紅果短劇），預設 hongguo
+    source: Mapped[str] = mapped_column(
+        String(32), nullable=False, server_default="hongguo", default="hongguo"
+    )
+    # 紅果後台 series_id（用嚟 on-demand 重新簽 signed video URL），無對應就係 None
+    hongguo_series_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

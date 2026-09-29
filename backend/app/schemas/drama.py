@@ -32,6 +32,8 @@ class DramaUpdate(BaseModel):
 class DramaOut(DramaBase):
     id: int
     category: CategoryOut | None = None
+    # 來源平台代碼（"hongguo" = 紅果短劇），後端回填，CMS 不需填
+    source: str = "hongguo"
 
     model_config = {"from_attributes": True}
 

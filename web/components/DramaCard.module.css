@@ -108,6 +108,21 @@
   z-index: 2;
 }
 
+.sourcePill {
+  display: inline-flex;
+  align-items: center;
+  margin-bottom: 5px;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  background: rgba(230, 56, 70, 0.85);
+  color: #fff;
+  font-size: 10px;
+  font-weight: var(--weight-medium);
+  letter-spacing: 0.02em;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
 .title {
   margin: 0;
   font-size: 13.5px;

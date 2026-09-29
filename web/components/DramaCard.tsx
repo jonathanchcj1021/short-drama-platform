@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import PosterPlaceholder from './PosterPlaceholder';
+import { sourceLabel } from '@/lib/sources';
 import type { Drama } from '@/types';
 import styles from './DramaCard.module.css';
 
@@ -12,6 +13,7 @@ interface Props {
 export default function DramaCard({ drama }: Props) {
   const categoryLabel = drama.category?.name ?? drama.category_name ?? '未分類';
   const hasCover = Boolean(drama.cover_url);
+  const from = sourceLabel(drama.source);
 
   return (
     <Link href={`/drama/?id=${drama.id}`} className={styles.card}>
@@ -40,6 +42,7 @@ export default function DramaCard({ drama }: Props) {
 
       {/* 底部劇名 */}
       <div className={styles.info}>
+        {from && <span className={styles.sourcePill}>📱 {from}</span>}
         <h3 className={styles.title}>{drama.title}</h3>
       </div>
     </Link>

@@ -42,6 +42,13 @@ export function saveAuth(accessToken: string, refreshToken: string, user: User):
   window.localStorage.setItem(USER_KEY, JSON.stringify(user));
 }
 
+/** 只更新 access / refresh token（不動 user）；用於 refresh token 換新時 */
+export function saveTokens(accessToken: string, refreshToken: string): void {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
+  window.localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+}
+
 /** 只更新本機快取嘅使用者資料（唔動 token） */
 export function saveUser(user: User): void {
   if (typeof window === 'undefined') return;
